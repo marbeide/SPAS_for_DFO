@@ -1,0 +1,504 @@
+---
+title: "SPAS_data_formatting_&_run"
+created: 2018-11-26
+updated: 2018-12-20
+author: Michael Arbeider, Michael.Arbeider@dfo-mpo.gc.ca (or marbeide@gmail.com)
+---
+
+This Rmarkdown file contains a function that produces the SPAS2 (now SPAS package in R) input file from the MACH2 xlsm file WB5PopEstimator.
+
+The steps to running this markdown file are as follows:
+1) Install & Load Packages
+1.5) Set Working Directory (to location of MACH2 files for specific project-year) IF-NEED-BE
+2) Read in Data
+3) Check and Rename Columns
+4) Run function code chunk
+5) Specify Strata and Sex Correction
+6) Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm
+7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location
+8) Double Check SPAS2_input.csv(s) by opening them
+
+The format of the SPAS_R_input.csv(s) (one will be _Female and one _Male) is a matrix of s+1 by t+1 (where s = number of application strata and t = number of recovery strata)
+Cell s+1 by t+1 will always be 0
+Column t+1 = contains the number of animals marked in each row stratum but not recovered in any column stratum.
+Row s+1 = contains the total number of UNMARKED animals recovered in column stratum its in
+All of the other cells are the number of recovered MARKED individuals of stratum s by t
+
+!!!For first time .Rmd users!!!
+To Run code, either click the green "play" button for a given "chunk"" or click to the line you want to run and click "Run" at the top of this pane or click crt-enter (if on a pc, cmd-enter on a mac)
+Chunks are created by '''{r} and ended by '''
+
+Subsequent Sections will have instructions
+
+```{r}
+rm(list=ls()) # clears global environment if need-be, this can generally be ignored
+```
+
+#1 Install & Load Packages
+Delete the # in front of install.packages() if you do not have "tidyverse" or "openxlsx" installed
+You can check if they are installed by clicking the "Packages" tab in the Plots pane (often bottom right pane) and scrolling down (packages are sorted alphabetically)
+```{r}
+#install.packages("tidyverse")
+#install.packages("openxlsx")
+```
+Library package
+Press play!
+```{r}
+library(tidyverse)
+library(openxlsx)
+# if there are R version errors, you will likely have to ignore them because we can't update R to the latest version through the Software Center
+```
+
+#1.5 Set Working Directory
+This step is only needed if your working directory isn't where your files are!
+```{r}
+getwd() # you can either check with this or by looking at the Files tab in the plots window
+```
+
+Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..."
+
+OR if you don't like clicking with your mouse, press Crtl+Shift+H, and it will do the same thing as the above sentence.
+
+#2 Read In Data
+Read in data from "WB5PopEstimator.xlsm"
+The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" sheets as long as they have not changed position in MACH2.
+i.e. if there have been changes to MACH2, you will need to change the numbers after "sheet = " so that they match the above respectively
+
+If the WB5PopEstimator file name has changed, you will have to modify it accordingly in this chunk
+```{r}
+app <- read.xlsx("WB5PopEstimator.xlsm", sheet = 4, detectDates = F)
+rec <- read.xlsx("WB5PopEstimator.xlsm", sheet = 5, detectDates = F)
+```
+
+# 3 Check and Rename Columns
+
+The next chunk renames those annoying strata column names with = and ' and other symbols that confuse R
+
+!!!Need to check if these are in fact the columns present and in the right place!!
+
+Run this chunk
+```{r}
+colnames(app)
+```
+
+Where is your first Strata column names? i.e. what is the column number?
+Where is you last column name?
+
+Here is a quick check if you are doing Chinook and haven't changed the number or type of default strata in MACH2
+```{r}
+# is "Application.strata:.=Days" in position 37 & "Application.strata:.extra2" in 47?
+colnames(app)[37] == "Application.strata:.=Days"
+colnames(app)[42] == "Application.strata:.extra1"
+colnames(app)[47] == "Application.strata:.extra2" 
+# if all are TRUE, you do not need to modify the below, if FALSE, you will have to find the correct positions
+```
+
+If your column names looks like they match the names below, then just run that chunk.
+Otherwise, you may have to renumber which columns are being changed and what your new column names are.
+
+Please only use letters, numbers, and underscores in your names.
+The most essential column names to change are the ones that you are going to use. You may ignore changing the rest if desired.
+
+```{r}
+colnames(app)[37:47] <- c("app_equal_days", "app_equal_effort", "app_equal_numbers",
+                          "app_equal_area", "app_equal_recaps", "app_equal_extra1",
+                          "rec_equal_days", "rec_equal_effort", "rec_equal_numbers",
+                          "rec_equal_area", "app_equal_extra2")
+```
+
+Rinse and repeat for Recovery dataframe!
+
+Check
+```{r}
+colnames(rec)
+```
+
+Quick Check if MACH2 Default
+```{r}
+colnames(rec)[17] == "Recovery.strata:.=Days"
+colnames(rec)[20] == "Recovery.strata:.area"
+colnames(rec)[23] == "Recovery.strata:.extra2"
+```
+
+Where you actually change stuff if need be
+```{r}
+colnames(rec)[17:23] <- c("rec_equal_days", "rec_equal_effort", "rec_equal_numbers",
+                          "rec_equal_area", "rec_equal_area2", "rec_equal_extra1",
+                          "rec_equal_extra2")
+```
+
+#4 Run Function code
+This function, SPAS2.input.file(), will do all the wonderful things your pivot tables used to!
+This includes distributing secondary marked only fish across the application strata (s)
+
+And it adds the sex correction to the applied tags in the form of 
+Female correction = 1 - Value, 
+Male Correction = 1 + Value.
+
+Once you run the chunk, you can minimize the code using the little arrow beside the first line (93) in the chunk (just so there is less scrolling to do)
+
+```{r}
+SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correction, name, jacks){ 
+  
+  app.strata <- enquo(app.strata) # enquo wraps argument in quosure so that subsequent functions can read it as a column name
+  rec.strata <- enquo(rec.strata)
+  correction = sex.correction
+  
+    # create sex corrected applications~app strata  
+  sex.cor <- filter(appdat, Application.Sex %in% c("M", "F")) %>% 
+    group_by(!!app.strata) %>% # creating a row for each app strata
+    summarise(applied = n()) %>% # n() plus group by does the same thing as count()
+    mutate(applied = applied*(correction)) # the sex correction per strata
+  
+  # This function is two sets of the "same" code, one for Males and one for Females
+  # Male code is denoted by m.
+  # Female code is denoted by f.
+  # Only the first set of steps is annotated
+  
+  # add sex corrected applications~app strata  
+  m.cor.app <- filter(appdat, Application.Sex == "M") %>% 
+    group_by(!!app.strata) %>% # creating a row for each app strata
+    summarise(applied = n()) %>% # n() plus group by does the same thing as count()
+    mutate(applied = applied+sex.cor$applied) # adding the sex correction
+  
+  # create sum of Untagged fish recovered per recovery strata
+  m.unt.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(untagged.rec = sum(Untagged.Males))
+  
+  # create column for total recoveryies and proportion recovered in each strata that will be used for redistributing secondary marked fish to application strata proportional to the recovery strata they were found in
+  m.total.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(total.rec = sum(Tagged.Males + Untagged.Males)) %>%
+    mutate(pr = total.rec/sum(total.rec))
+
+  # t by s matrix of number of tags recovered in strata t by application strata s
+  m.t.rec <- appdat %>%
+    filter(Recovery.Sex == "M") %>%
+    group_by(!!app.strata, !!rec.strata) %>%
+    summarise(tag.recoverd = n()) %>% # this creates a long form version
+    spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
+
+  # if there are secondary only recoveries the next three blocks will run
+  
+  # takes the proportion column from m.total.rec and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
+  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add <- as.matrix(m.total.rec[,3]) %*% 
+    as.matrix(m.t.rec[is.na(m.t.rec[,1]) , 2:ncol(m.t.rec)])
+
+  # if there are any NA's because there were no secondary only recoveries in a particular strata, this replaces them with a 0 (I don't know why I had to make an equivelant number of 0s to NAs...)  
+  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
+    rep(0, length(secondary.add[is.na(secondary.add)]))
+
+  # adds the secondary correction to the t by s matrix of tag recoveries
+  if(is.na(m.t.rec[nrow(m.t.rec),1])) m.t.rec[!is.na(m.t.rec[,1]), 
+                                              2:ncol(m.t.rec)] <- m.t.rec[!is.na(m.t.rec[,1]), 
+                                                                          2:ncol(m.t.rec)] + secondary.add
+
+  # assembles SPAS 1 input file
+  m.spas1 <- rbind(cbind(m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1]), c(NA,t(m.unt.rec[ , -1])))
+  strata <- c("strata 1", "strata 2", "strata 3", "strata 4", "strata 5", "strata 6", "strata 7")
+  m.spas1 <- as.matrix(cbind(c(strata[1:nrow(m.cor.app)], NA), m.spas1))
+  m.spas1 <- as.data.frame(rbind(c(nrow(m.cor.app), nrow(m.unt.rec), rep(NA, nrow(m.unt.rec))), 
+                   c(NA, NA, strata[1:nrow(m.unt.rec)]), 
+                   m.spas1))
+  
+  #write.table(m.spas1, "SPAS1_input_Males.txt", row.names = F, col.names = F, sep = "", na = "         ")
+
+  # assembles new R SPAS input matrix & file
+  m.spasR <- cbind( m.t.rec[!is.na(m.t.rec[,1]), -1],  m.cor.app[ , -1] - rowSums(m.t.rec[!is.na(m.t.rec[,1]), -1]))
+  m.spasR <- as.matrix(rbind(m.spasR, c(t(m.unt.rec[ , -1]), 0)))
+  
+  write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
+              row.names = F, col.names = F, sep = ",")
+ 
+  # assembles the required columns of the old SPAS 2 (R SPAS) input file
+  m.spas2 <- cbind(m.unt.rec[ , -1], m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1])
+  m.spas2 <- as.matrix(m.spas2) # makes it a matrix for easy csv saving with no column names
+  
+  # makes your csv in your working directory
+  #write.table(m.spas2, "SPAS2_old_input_Males.csv", row.names = F, col.names = F, sep = ",")
+  
+    ####################################################################################################
+  #  Dito for Females because looping sum(Untagged.Males) vs. sum(Untagged.Females) doesn't gain much#
+  
+  f.cor.app <- filter(appdat, Application.Sex == "F") %>% 
+    group_by(!!app.strata) %>%
+    summarise(applied = n()) %>%
+    mutate(applied = applied-sex.cor$applied) # noting that this is substract for females
+  
+  f.unt.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(untagged.rec = sum(Untagged.Females))
+  
+  f.total.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(total.rec = sum(Tagged.Females + Untagged.Females)) %>%
+    mutate(pr = total.rec/sum(total.rec))
+  
+  f.t.rec <- appdat %>%
+    filter(Recovery.Sex == "F") %>%
+    group_by(!!app.strata, !!rec.strata) %>%
+    summarise(tag.recoverd = n()) %>%
+    spread(!!rec.strata, tag.recoverd)
+  
+  if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add <- as.matrix(f.total.rec[,3]) %*% 
+    as.matrix(f.t.rec[is.na(f.t.rec[,1]) , 2:ncol(f.t.rec)])
+  
+  if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
+    rep(0, length(secondary.add[is.na(secondary.add)]))
+  
+  if(is.na(f.t.rec[nrow(f.t.rec),1])) f.t.rec[!is.na(f.t.rec[,1]), 
+                                              2:ncol(f.t.rec)] <- f.t.rec[!is.na(f.t.rec[,1]), 
+                                                                          2:ncol(f.t.rec)] + secondary.add
+  
+  # assembles SPAS 1 input file
+  f.spas1 <- rbind(cbind(f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1]), c(NA,t(f.unt.rec[ , -1])))
+  strata <- c("strata 1", "strata 2", "strata 3", "strata 4", "strata 5", "strata 6", "strata 7")
+  f.spas1 <- as.matrix(cbind(c(strata[1:nrow(f.cor.app)], NA), f.spas1))
+  f.spas1 <- as.data.frame(rbind(c(nrow(f.cor.app), nrow(f.unt.rec), rep(NA, nrow(f.unt.rec))), 
+                                 c(NA, NA, strata[1:nrow(f.unt.rec)]), 
+                                 f.spas1))
+  
+  #write.table(f.spas1, "SPAS1_input_Females.txt", row.names = F, col.names = F, sep = "", na = "         ")
+  
+  # assembles new R SPAS input matrix & file
+  f.spasR <- cbind( f.t.rec[!is.na(f.t.rec[,1]), -1],  f.cor.app[ , -1] - 
+                      rowSums(f.t.rec[!is.na(f.t.rec[,1]), -1]))
+  f.spasR <- as.matrix(rbind(f.spasR, c(t(f.unt.rec[ , -1]), 0)))
+  
+    write.table(f.spasR, paste("SPAS_R_", name, "_input_Females.csv", sep = ""), 
+              row.names = F, col.names = F, sep = ",")
+  
+  # assembles the required columns of the old SPAS 2 (R SPAS) input file
+  f.spas2 <- bind_cols(f.unt.rec[ , -1], f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1])
+  f.spas2 <- as.matrix(f.spas2)
+  
+  #write.table(f.spas2, "SPAS2_old_input_Females.csv", row.names = F, col.names = F, sep = ",")
+  
+  ####################################################################################################
+  # Print Values for Validating with MACH2
+  
+  Value <- c("Tags.Applied.M","Tags.Recovered.M","Total.Recovered.M",
+             "Tags.Applied.F","Tags.Recovered.F","Total.Recovered.F")
+  
+  #simple column or matrix summations to create the validating values described above
+  Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), sum(m.spas2[,c(1,3:ncol(m.spas2))]),
+                sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), sum(f.spas2[,c(1,3:ncol(f.spas2))]))
+  
+  Validate <- data.frame(Value, Estimate)
+  
+    print(Validate)
+    
+    ####################################################################################################
+  #  Dito for Jacks because looping sum(Untagged.Males) vs. sum(Untagged.Females) doesn't gain much#
+
+        
+      # creating applications~app strata  
+  if(jacks == TRUE) j.cor.app <- filter(appdat, Application.Sex == "J") %>% 
+    group_by(!!app.strata) %>% # creating a row for each app strata
+    summarise(applied = n())# n() plus group by does the same thing as count()
+      
+  
+  # create sum of Untagged fish recovered per recovery strata
+  if(jacks == TRUE) j.unt.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(untagged.rec = sum(Untagged.Jacks))
+  
+  # create column for total recoveryies and proportion recovered in each strata that will be used for redistributing secondary marked fish to application strata proportional to the recovery strata they were found in
+  if(jacks == TRUE) j.total.rec <- recdat %>% 
+    group_by(!!rec.strata) %>%
+    summarise(total.rec = sum(Tagged.Jacks + Untagged.Jacks)) %>%
+    mutate(pr = total.rec/sum(total.rec))
+
+  # t by s matrix of number of tags recovered in strata t by application strata s
+  if(jacks == TRUE) j.t.rec <- appdat %>%
+    filter(Recovery.Sex == "J") %>%
+    group_by(!!app.strata, !!rec.strata) %>%
+    summarise(tag.recoverd = n()) %>% # this creates a long form version
+    spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
+
+  # if there are secondary only recoveries the next three blocks will run
+  
+  # takes the proportion column from j.total.rec and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
+  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) secondary.add <- as.matrix(j.total.rec[,3]) %*% 
+    as.matrix(j.t.rec[is.na(j.t.rec[,1]) , 2:ncol(j.t.rec)])
+
+  # if there are any NA's because there were no secondary only recoveries in a particular strata, this replaces them with a 0 (I don't know why I had to make an equivelant number of 0s to NAs...)  
+  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
+    rep(0, length(secondary.add[is.na(secondary.add)]))
+
+  # adds the secondary correction to the t by s matrix of tag recoveries
+  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) j.t.rec[!is.na(j.t.rec[,1]), 
+                                              2:ncol(j.t.rec)] <- j.t.rec[!is.na(j.t.rec[,1]), 
+                                                                          2:ncol(j.t.rec)] + secondary.add
+
+  # assembles new R SPAS input matrix & file
+  if(jacks == TRUE) j.spasR <- cbind( j.t.rec[!is.na(j.t.rec[,1]), -1],  j.cor.app[ , -1] - rowSums(j.t.rec[!is.na(j.t.rec[,1]), -1]))
+  if(jacks == TRUE) j.spasR <- as.matrix(rbind(j.spasR, c(t(j.unt.rec[ , -1]), 0)))
+  
+  if(jacks == TRUE) write.table(j.spasR, paste("SPAS_R_", name, "_input_Jacks.csv", sep = ""), 
+              row.names = F, col.names = F, sep = ",")
+ 
+}
+```
+
+#5 Specify Strata and Corrections
+In the chunk below these instructions, do the following:
+
+i) Enter the decided upon strata after the = sign 
+for app.strata and rec.strata where it says REPLACE.THIS.TEXT
+
+e.g. app.strata = app_equal_days , 
+     rec.strata = rec_equal_numbers ,
+
+List of possible choices for app and rec strata:
+
+app_equal_days 
+app_equal_effort 
+app_equal_numbers
+app_equal_area 
+app_equal_recaps 
+app_equal_extra1
+
+rec_equal_days 
+rec_equal_effort 
+rec_equal_numbers
+rec_equal_area 
+rec_equal_extra2
+
+
+ii) Replace ENTER.NUMBER.HERE text with 
+the Male sex correction factor after the = sign for sex.correction
+                          
+```{r}
+SPAS2.input.file(appdat = app, # application data from Section 3, do not change this
+                 recdat = rec, # recovery data from Section 3,  do not change this
+                 app.strata = ENTER_APP_STRATA , # enter your application strata from the list above
+                 rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above
+                 sex.correction = ENTER_NUMBER , # enter the Male sex correction 
+                 name = "NAME", # enter the stratification descripter, e.g.spatial or equal_days
+                 jacks = FALSE) # Change to TRUE if you want an file for Jacks
+```
+
+Copy and paste the above code if you want to make multiple stratifications
+
+#6 Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm
+
+There should be an output in the R Console of 6 values, 
+use these values to validate that R has counted or added up the same numbers that correspond in the PopEstimatorPRT sheet int he WB5PopEstimator.xlsm file.
+
+If they don't... something has gone awry.
+
+#7 Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location
+
+The function automatically created the outputs and placed them in your working directory you chose in Step #2.
+They are named SPAS2_input_Males.csv and SPAS2_input_Females.csv
+Move them to the desired folder (possibly your SPAS2 analysis folder?) and rename them if desired
+
+#8 Triple Check SPAS2_input.csv(s) by opening them
+You can do a triple check here by summing the correct columns to again make sure the sums add to the ones in the MACH2 files.
+Just make sure you don't save those column sums!
+
+Taadaa! Your file is ready to be read by SPAS2 (R SPAS)
+
+# Load SPAS & AICc Compare
+Install it (i.e. unhashtag and play the chunk) if you do not have it installed
+```{r}
+# devtools::install_github("cschwarz-stat-sfu-ca/SPAS", dependencies = TRUE, build_vignettes = TRUE)
+```
+
+Library/load it, press play
+```{r}
+library(SPAS)
+```
+
+# Read SPAS Input Files
+```{r}
+# rename the dataframe and the csv if you are using multiple stratifications
+(males <- as.matrix(read.csv("SPAS_R_NAME_input_Males.csv", header = F))) # rename if you are using multiple stratifications
+(females <- as.matrix(read.csv("SPAS_R_NAME_input_Females.csv", header = F)))
+```
+
+# SPAS for Males
+```{r}
+sink("Males-Analysis.txt", # Can Add year and system to name
+     split=TRUE)
+
+mod1 <- SPAS.fit.model(males, # make sure data frame is correct
+                           model.id = "Petersen", # change name to desired description
+                       row.pool.in = c(1, 1), # add ,3 if its a 3 x 3
+                       col.pool.in = c(1, 1), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, CJSpool = FALSE)
+
+SPAS.print.model(mod1)
+
+mod2 <- SPAS.fit.model(males, # make sure data frame is correct
+                             model.id = "Stratified", # change name to desired description
+                       row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, CJSpool = FALSE) # don't change for now
+
+SPAS.print.model(mod2)
+
+# Copy and paste mod2 until this point if there is another stratification type and edit data going into it and name to mod3
+
+
+# If you added a mod3, or mod4 etc, you will need to copy and paste each aspect of the dataframe so that mod3 has for example a mod3$model.info$model.id line
+output <- data.frame(Model.Name = c(mod1$model.info$model.id,
+                                    mod2$model.info$model.id),
+                     N = c(mod1$real$est.indiv$N,
+                           mod2$real$est.indiv$N),
+                     SE = c(mod1$real$est.indiv$N.se,
+                            mod2$real$est.indiv$N.se),
+                     CI = c(mod1$real$est.indiv$N.se*1.96,
+                            mod2$real$est.indiv$N.se*1.96))
+                                    
+cat("\n") # these are just added spaces so that the print out is nicer
+cat("\n")
+
+output # prints your model outputs in a nicer table
+
+sink() # ends the text file
+```
+
+# SPAS for Females
+```{r}
+sink("Female-Analysis.txt", # Can Add year and system to name
+     split=TRUE)
+
+mod1 <- SPAS.fit.model(females, # make sure data frame is correct
+                           model.id = "Petersen", # change name to desired description
+                       row.pool.in = c(1, 1), # add ,3 if its a 3 x 3
+                       col.pool.in = c(1, 1), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, CJSpool = FALSE)
+
+SPAS.print.model(mod1)
+
+mod2 <- SPAS.fit.model(females, # make sure data frame is correct
+                             model.id = "Stratified", # change name to desired description
+                       row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, CJSpool = FALSE) # don't change for now
+
+SPAS.print.model(mod2)
+
+# Copy and paste mod2 until this point if there is another stratification type and edit data going into it and name to mod3
+
+
+# If you added a mod3, or mod4 etc, you will need to copy and paste each aspect of the dataframe so that mod3 has for example a mod3$model.info$model.id line
+output <- data.frame(Model.Name = c(mod1$model.info$model.id,
+                                    mod2$model.info$model.id),
+                     N = c(mod1$real$est.indiv$N,
+                           mod2$real$est.indiv$N),
+                     SE = c(mod1$real$est.indiv$N.se,
+                            mod2$real$est.indiv$N.se),
+                     CI = c(mod1$real$est.indiv$N.se*1.96,
+                            mod2$real$est.indiv$N.se*1.96))
+                                    
+cat("\n") # these are just added spaces so that the print out is nicer
+cat("\n")
+
+output # prints your model outputs in a nicer table
+
+sink() # ends the text file
+```

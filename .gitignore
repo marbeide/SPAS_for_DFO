@@ -11,6 +11,10 @@
 # Example code in package build process
 *-Ex.R
 
+# Example Data and Outputs
+Example Data/*
+Example Outputs/*
+
 # Output files from R CMD build
 /*.tar.gz
 
