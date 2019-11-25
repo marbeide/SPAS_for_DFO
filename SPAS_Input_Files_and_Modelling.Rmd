@@ -5,7 +5,10 @@ updated: 2018-12-20
 author: Michael Arbeider, Michael.Arbeider@dfo-mpo.gc.ca (or marbeide@gmail.com)
 ---
 
-This Rmarkdown file contains a function that produces the SPAS2 (now SPAS package in R) input file from the MACH2 xlsm file WB5PopEstimator.
+# Intro to R Studio and Using this .Rmd script
+This "R Markdown" (.Rmd) files works best when used in R studio. If you are unfamiliar with R Studio, this book: https://bookdown.org/ndphillips/YaRrr/the-four-rstudio-windows.html has a good intro to the different Windows and features as well as other info about using R.
+
+This Markdown file contains a function that produces the SPAS input file from the MACH2 xlsm file WB5PopEstimator.
 
 The steps to running this markdown file are as follows:
 1) Install & Load Packages
@@ -21,11 +24,11 @@ The steps to running this markdown file are as follows:
 The format of the SPAS_R_input.csv(s) (one will be _Female and one _Male) is a matrix of s+1 by t+1 (where s = number of application strata and t = number of recovery strata)
 Cell s+1 by t+1 will always be 0
 Column t+1 = contains the number of animals marked in each row stratum but not recovered in any column stratum.
-Row s+1 = contains the total number of UNMARKED animals recovered in column stratum its in
+Row s+1 = contains the total number of UNMARKED animals recovered in column stratum it's in.
 All of the other cells are the number of recovered MARKED individuals of stratum s by t
 
 !!!For first time .Rmd users!!!
-To Run code, either click the green "play" button for a given "chunk"" or click to the line you want to run and click "Run" at the top of this pane or click crt-enter (if on a pc, cmd-enter on a mac)
+To Run code, either click the green "play" button for a given "chunk"" or click to the line you want to run and click "Run" at the top of this pane or click crt+enter if on a pc or cmd+enter on a mac.
 Chunks are created by '''{r} and ended by '''
 
 Subsequent Sections will have instructions
@@ -37,11 +40,26 @@ rm(list=ls()) # clears global environment if need-be, this can generally be igno
 #1 Install & Load Packages
 Delete the # in front of install.packages() if you do not have "tidyverse" or "openxlsx" installed
 You can check if they are installed by clicking the "Packages" tab in the Plots pane (often bottom right pane) and scrolling down (packages are sorted alphabetically)
+
 ```{r}
 #install.packages("tidyverse")
 #install.packages("openxlsx")
 ```
-Library package
+
+## Install or Update SPAS
+Sometimes this install will prompt you to install other packages. Type 1 into the console to select all packagess and install them.
+IF some packages fail to install, try the following:
+  a) Use the "Update" button in the "Packages" tab of the "Files/Plots/Packages/Help" Window. Click the button, then select the packages that need to be updated. Click the Update button.
+Remove the packages and re-install them.
+  b) Or try: remove.packages(“package name”) in the console (enter package name and then click enter) and then use install.packages(‘package name’) to re-install it.
+  c) If the above doesn’t work, try: go to your Library folder on your computer and delete the files. You can find your library location by clicking the “Install” button and seeing where the packages are being installed by default. Navigate to the folder and delete the package folder(s). Use install.packages() or Install button to re-install the problem package.
+```{r}
+# ALWAYS run the below line to see if there are updates to SPAS in GitHub
+devtools::install_github("cschwarz-stat-sfu-ca/SPAS", dependencies = TRUE,
+                        build_vignettes = TRUE)
+```
+
+##Library other packages
 Press play!
 ```{r}
 library(tidyverse)
@@ -55,7 +73,7 @@ This step is only needed if your working directory isn't where your files are!
 getwd() # you can either check with this or by looking at the Files tab in the plots window
 ```
 
-Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..."
+Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
 
 OR if you don't like clicking with your mouse, press Crtl+Shift+H, and it will do the same thing as the above sentence.
 
@@ -72,9 +90,9 @@ rec <- read.xlsx("WB5PopEstimator.xlsm", sheet = 5, detectDates = F)
 
 # 3 Check and Rename Columns
 
-The next chunk renames those annoying strata column names with = and ' and other symbols that confuse R
+The next chunk renames those troublesome strata column names with "=" and " ' " and other symbols that confuse R.
 
-!!!Need to check if these are in fact the columns present and in the right place!!
+!!!Need to check if these are in fact the columns present and in the right place!!!
 
 Run this chunk
 ```{r}
@@ -90,7 +108,7 @@ Here is a quick check if you are doing Chinook and haven't changed the number or
 colnames(app)[37] == "Application.strata:.=Days"
 colnames(app)[42] == "Application.strata:.extra1"
 colnames(app)[47] == "Application.strata:.extra2" 
-# if all are TRUE, you do not need to modify the below, if FALSE, you will have to find the correct positions
+# if all are TRUE, you likely do not need to modify the below, if FALSE, you will have to find the correct positions
 ```
 
 If your column names looks like they match the names below, then just run that chunk.
