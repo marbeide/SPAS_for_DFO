@@ -1,8 +1,11 @@
 ---
 title: "SPAS_data_formatting_&_run"
-created: 2018-11-26
-updated: 2018-12-20
-author: Michael Arbeider, Michael.Arbeider@dfo-mpo.gc.ca (or marbeide@gmail.com)
+author: "Michael Arbeider, Michael.Arbeider@dfo-mpo.gc.ca (or marbeide@gmail.com)"
+date: '2019-11-25'
+output:
+  rmarkdown::html_vignette: default
+  html: default
+created: '2018-11-26'
 ---
 
 # Intro to R Studio and Using this .Rmd script
@@ -64,6 +67,7 @@ Press play!
 ```{r}
 library(tidyverse)
 library(openxlsx)
+library(SPAS)
 # if there are R version errors, you will likely have to ignore them because we can't update R to the latest version through the Software Center
 ```
 
@@ -153,7 +157,7 @@ And it adds the sex correction to the applied tags in the form of
 Female correction = 1 - Value, 
 Male Correction = 1 + Value.
 
-Once you run the chunk, you can minimize the code using the little arrow beside the first line (93) in the chunk (just so there is less scrolling to do)
+Once you run the chunk, you can minimize the code using the little arrow beside the first line (159) in the chunk (just so there is less scrolling to do)
 
 ```{r}
 SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correction, name, jacks){ 
