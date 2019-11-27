@@ -79,8 +79,6 @@ getwd() # you can either check with this or by looking at the Files tab in the p
 
 Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
 
-OR if you don't like clicking with your mouse, press Crtl+Shift+H, and it will do the same thing as the above sentence.
-
 #2 Read In Data
 Read in data from "WB5PopEstimator.xlsm"
 The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" sheets as long as they have not changed position in MACH2.
@@ -423,15 +421,39 @@ Just make sure you don't save those column sums!
 
 Taadaa! Your file is ready to be read by SPAS2 (R SPAS)
 
-# Load SPAS & AICc Compare
-Install it (i.e. unhashtag and play the chunk) if you do not have it installed
+# Load Report Function
+Initial code written by Carl
 ```{r}
-# devtools::install_github("cschwarz-stat-sfu-ca/SPAS", dependencies = TRUE, build_vignettes = TRUE)
-```
+# define reporting and removal functions
+get.models <- function(pattern){
+    # get the list of models according to the pattern specified
+    #browser()
+    model.list <- mget( ls(envir=globalenv())[grepl(pattern,ls(envir=globalenv()))], envir=globalenv())
+    model.list
+}
 
-Library/load it, press play
-```{r}
-library(SPAS)
+
+make.report <- function(model.list){
+   # make a little report
+   report <- plyr::ldply(model.list, function(x){
+      #browser()
+      data.frame(#version=x$version,
+         date   = as.Date(x$date),
+         model.id         = x$model.info$model.id,
+         s.a.pool         =-1+nrow(x$fit.setup$pooldata),
+         t.p.pool         =-1+ncol(x$fit.setup$pooldata),
+         logL.cond        = x$model.info$logL.cond,
+         np               = x$model.info$np,
+         AICc             = x$model.info$AICc,
+         gof.chisq        = round(x$gof$chisq,1),
+         gof.df           = x$gof$chisq.df,
+         gof.p            = round(x$gof$chisq.p,3),
+         Nhat             = round(x$est$real$N),
+         Nhat.se          = round(x$se $real$N))
+      
+   })
+   report
+}
 ```
 
 # Read SPAS Input Files
@@ -443,84 +465,62 @@ library(SPAS)
 
 # SPAS for Males
 ```{r}
-sink("Males-Analysis.txt", # Can Add year and system to name
-     split=TRUE)
-
-mod1 <- SPAS.fit.model(males, # make sure data frame is correct
+mod..1 <- SPAS.fit.model(males, # make sure data frame is correct
                            model.id = "Petersen", # change name to desired description
                        row.pool.in = c(1, 1), # add ,3 if its a 3 x 3
                        col.pool.in = c(1, 1), # add ,3 if its a 3 x 3
-                       theta.pool = FALSE, CJSpool = FALSE)
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE)
 
 SPAS.print.model(mod1)
 
-mod2 <- SPAS.fit.model(males, # make sure data frame is correct
+mod..2 <- SPAS.fit.model(males, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
                        row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
                        col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
-                       theta.pool = FALSE, CJSpool = FALSE) # don't change for now
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE) # don't change for now
 
 SPAS.print.model(mod2)
 
 # Copy and paste mod2 until this point if there is another stratification type and edit data going into it and name to mod3
 
 
-# If you added a mod3, or mod4 etc, you will need to copy and paste each aspect of the dataframe so that mod3 has for example a mod3$model.info$model.id line
-output <- data.frame(Model.Name = c(mod1$model.info$model.id,
-                                    mod2$model.info$model.id),
-                     N = c(mod1$real$est.indiv$N,
-                           mod2$real$est.indiv$N),
-                     SE = c(mod1$real$est.indiv$N.se,
-                            mod2$real$est.indiv$N.se),
-                     CI = c(mod1$real$est.indiv$N.se*1.96,
-                            mod2$real$est.indiv$N.se*1.96))
-                                    
-cat("\n") # these are just added spaces so that the print out is nicer
-cat("\n")
+model.list <- get.models("^mod\\.\\.")
+report.males <- make.report(model.list)
 
-output # prints your model outputs in a nicer table
-
-sink() # ends the text file
+write.xlsx(report.males, "NAME_males_report.xlsx", row.names = F)
 ```
 
 # SPAS for Females
 ```{r}
-sink("Female-Analysis.txt", # Can Add year and system to name
-     split=TRUE)
-
-mod1 <- SPAS.fit.model(females, # make sure data frame is correct
+mod..1 <- SPAS.fit.model(females, # make sure data frame is correct
                            model.id = "Petersen", # change name to desired description
                        row.pool.in = c(1, 1), # add ,3 if its a 3 x 3
                        col.pool.in = c(1, 1), # add ,3 if its a 3 x 3
-                       theta.pool = FALSE, CJSpool = FALSE)
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE)
 
 SPAS.print.model(mod1)
 
-mod2 <- SPAS.fit.model(females, # make sure data frame is correct
+mod..2 <- SPAS.fit.model(females, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
                        row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
                        col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
-                       theta.pool = FALSE, CJSpool = FALSE) # don't change for now
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE) # don't change for now
 
 SPAS.print.model(mod2)
 
 # Copy and paste mod2 until this point if there is another stratification type and edit data going into it and name to mod3
 
 
-# If you added a mod3, or mod4 etc, you will need to copy and paste each aspect of the dataframe so that mod3 has for example a mod3$model.info$model.id line
-output <- data.frame(Model.Name = c(mod1$model.info$model.id,
-                                    mod2$model.info$model.id),
-                     N = c(mod1$real$est.indiv$N,
-                           mod2$real$est.indiv$N),
-                     SE = c(mod1$real$est.indiv$N.se,
-                            mod2$real$est.indiv$N.se),
-                     CI = c(mod1$real$est.indiv$N.se*1.96,
-                            mod2$real$est.indiv$N.se*1.96))
-                                    
-cat("\n") # these are just added spaces so that the print out is nicer
-cat("\n")
+model.list <- get.models("^mod\\.\\.")
+report.females <- make.report(model.list)
 
-output # prints your model outputs in a nicer table
-
-sink() # ends the text file
+write.xlsx(report.females, "NAME_females_report.xlsx", row.names = F)
 ```
