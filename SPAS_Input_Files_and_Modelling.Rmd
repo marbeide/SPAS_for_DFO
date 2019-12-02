@@ -199,6 +199,10 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
 
+    # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
+  m.t.rec[ , 2:ncol(m.t.rec)][is.na(m.t.rec[ , 2:ncol(m.t.rec)])] <- 0
+  
+  
   # if there are secondary only recoveries the next three blocks will run
   
   # takes the proportion column from m.total.rec and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
@@ -260,6 +264,8 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     group_by(!!app.strata, !!rec.strata) %>%
     summarise(tag.recoverd = n()) %>%
     spread(!!rec.strata, tag.recoverd)
+  
+    f.t.rec[ , 2:ncol(f.t.rec)][is.na(f.t.rec[ , 2:ncol(f.t.rec)])] <- 0
   
   if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add <- as.matrix(f.total.rec[,3]) %*% 
     as.matrix(f.t.rec[is.na(f.t.rec[,1]) , 2:ncol(f.t.rec)])
@@ -336,6 +342,11 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     group_by(!!app.strata, !!rec.strata) %>%
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
+    
+      # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
+   if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
+    
+    
 
   # if there are secondary only recoveries the next three blocks will run
   
@@ -366,7 +377,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
 In the chunk below these instructions, do the following:
 
 i) Enter the decided upon strata after the = sign 
-for app.strata and rec.strata where it says REPLACE.THIS.TEXT
+for app.strata and rec.strata where it says ENTER_APP_STRATA and ENTER_REC_STRATA
 
 e.g. app.strata = app_equal_days , 
      rec.strata = rec_equal_numbers ,
@@ -387,8 +398,7 @@ rec_equal_area
 rec_equal_extra2
 
 
-ii) Replace ENTER.NUMBER.HERE text with 
-the Male sex correction factor after the = sign for sex.correction
+ii) Replace ENTER_NUMBER text withthe Male sex correction factor after the = sign for sex.correction
                           
 ```{r}
 SPAS2.input.file(appdat = app, # application data from Section 3, do not change this
