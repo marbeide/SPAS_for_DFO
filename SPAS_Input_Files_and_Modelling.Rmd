@@ -160,10 +160,25 @@ Male Correction = 1 + Value.
 Press the play button (right hand side) and then minimize with the arrow by the line nubmers (on the left hand side)
 DO NOT EDIT unless making a commit to the GitHub
 ```{r}
-SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correction, name, jacks){ 
+SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
+                              rec.strata, combine.rec,
+                              sex.correction, name, jacks, square){ 
   
-  app.strata <- enquo(app.strata) # enquo wraps argument in quosure so that subsequent functions can read it as a column name
-  rec.strata <- enquo(rec.strata)
+  # If combine.app is TRUE, this will unite the strata for subsequent grouping
+  if(combine.app == TRUE) combine.by.a <- enquo(app.strata)
+  if(combine.app == TRUE) appdat <- appdat %>% unite("app.strata", !!combine.by.a)
+  if(combine.app == TRUE) app.strata = quo(app.strata)
+  # If combine.app is FALSE, this will just wrap the strata in qosure o that subsequent functions can read it as a column name
+  if(combine.app == FALSE) app.strata <- enquo(app.strata)
+  
+  # If combine.rec is TRUE, this will unite the strata for subsequent grouping
+  if(combine.rec == TRUE) combine.by.r <- enquo(rec.strata)
+  if(combine.rec == TRUE) recdat <- recdat %>% unite("rec.strata", !!combine.by.r)
+  if(combine.rec == TRUE) appdat <- appdat %>% unite("rec.strata", !!combine.by.r)
+  if(combine.rec == TRUE) rec.strata = quo(rec.strata)
+  # If combine.rec is FALSE, this will just wrap the strata in qosure o that subsequent functions can read it as a column name
+  if(combine.rec == FALSE) rec.strata <- enquo(rec.strata)
+  
   correction = sex.correction
   
     # create sex corrected applications~app strata  
@@ -201,6 +216,10 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
 
+    add <- setdiff(m.cor.app[,1], m.t.rec[,1])
+    num <- nrow(add)
+    if(num >0) m.t.rec[(nrow(m.t.rec)+1):(nrow(m.t.rec)+num), 1] <- add
+  
     # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
   m.t.rec[ , 2:ncol(m.t.rec)][is.na(m.t.rec[ , 2:ncol(m.t.rec)])] <- 0
   
@@ -220,31 +239,18 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
                                               2:ncol(m.t.rec)] <- m.t.rec[!is.na(m.t.rec[,1]), 
                                                                           2:ncol(m.t.rec)] + secondary.add
 
-  # assembles SPAS 1 input file
-  m.spas1 <- rbind(cbind(m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1]), c(NA,t(m.unt.rec[ , -1])))
-  strata <- c("strata 1", "strata 2", "strata 3", "strata 4", "strata 5", "strata 6", "strata 7")
-  m.spas1 <- as.matrix(cbind(c(strata[1:nrow(m.cor.app)], NA), m.spas1))
-  m.spas1 <- as.data.frame(rbind(c(nrow(m.cor.app), nrow(m.unt.rec), rep(NA, nrow(m.unt.rec))), 
-                   c(NA, NA, strata[1:nrow(m.unt.rec)]), 
-                   m.spas1))
-  
-  #write.table(m.spas1, "SPAS1_input_Males.txt", row.names = F, col.names = F, sep = "", na = "         ")
-
-  # assembles new R SPAS input matrix & file
+    # assembles new R SPAS input matrix & file
   m.spasR <- cbind( m.t.rec[!is.na(m.t.rec[,1]), -1],  m.cor.app[ , -1] - rowSums(m.t.rec[!is.na(m.t.rec[,1]), -1]))
   m.spasR <- as.matrix(rbind(m.spasR, c(t(m.unt.rec[ , -1]), 0)))
   
   write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
               row.names = F, col.names = F, sep = ",")
  
-  # assembles the required columns of the old SPAS 2 (R SPAS) input file
+  # assembles the required columns of the old SPAS 2 (R SPAS) input file AND check
   m.spas2 <- cbind(m.unt.rec[ , -1], m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1])
   m.spas2 <- as.matrix(m.spas2) # makes it a matrix for easy csv saving with no column names
   
-  # makes your csv in your working directory
-  #write.table(m.spas2, "SPAS2_old_input_Males.csv", row.names = F, col.names = F, sep = ",")
-  
-    ####################################################################################################
+      ####################################################################################################
   #  Dito for Females because looping sum(Untagged.Males) vs. sum(Untagged.Females) doesn't gain much#
   
   f.cor.app <- filter(appdat, Application.Sex == "F") %>% 
@@ -267,6 +273,10 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     summarise(tag.recoverd = n()) %>%
     spread(!!rec.strata, tag.recoverd)
   
+    add <- setdiff(f.cor.app[,1], f.t.rec[,1])
+    num <- nrow(add)
+    if(num >0) f.t.rec[(nrow(f.t.rec)+1):(nrow(f.t.rec)+num), 1] <- add
+  
     f.t.rec[ , 2:ncol(f.t.rec)][is.na(f.t.rec[ , 2:ncol(f.t.rec)])] <- 0
   
   if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add <- as.matrix(f.total.rec[,3]) %*% 
@@ -279,16 +289,6 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
                                               2:ncol(f.t.rec)] <- f.t.rec[!is.na(f.t.rec[,1]), 
                                                                           2:ncol(f.t.rec)] + secondary.add
   
-  # assembles SPAS 1 input file
-  f.spas1 <- rbind(cbind(f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1]), c(NA,t(f.unt.rec[ , -1])))
-  strata <- c("strata 1", "strata 2", "strata 3", "strata 4", "strata 5", "strata 6", "strata 7")
-  f.spas1 <- as.matrix(cbind(c(strata[1:nrow(f.cor.app)], NA), f.spas1))
-  f.spas1 <- as.data.frame(rbind(c(nrow(f.cor.app), nrow(f.unt.rec), rep(NA, nrow(f.unt.rec))), 
-                                 c(NA, NA, strata[1:nrow(f.unt.rec)]), 
-                                 f.spas1))
-  
-  #write.table(f.spas1, "SPAS1_input_Females.txt", row.names = F, col.names = F, sep = "", na = "         ")
-  
   # assembles new R SPAS input matrix & file
   f.spasR <- cbind( f.t.rec[!is.na(f.t.rec[,1]), -1],  f.cor.app[ , -1] - 
                       rowSums(f.t.rec[!is.na(f.t.rec[,1]), -1]))
@@ -296,13 +296,11 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
   
     write.table(f.spasR, paste("SPAS_R_", name, "_input_Females.csv", sep = ""), 
               row.names = F, col.names = F, sep = ",")
-  
+ 
   # assembles the required columns of the old SPAS 2 (R SPAS) input file
-  f.spas2 <- bind_cols(f.unt.rec[ , -1], f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1])
+  f.spas2 <- cbind(f.unt.rec[ , -1], f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1])
   f.spas2 <- as.matrix(f.spas2)
-  
-  #write.table(f.spas2, "SPAS2_old_input_Females.csv", row.names = F, col.names = F, sep = ",")
-  
+     
   ####################################################################################################
   # Print Values for Validating with MACH2
   
@@ -310,8 +308,13 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
              "Tags.Applied.F","Tags.Recovered.F","Total.Recovered.F")
   
   #simple column or matrix summations to create the validating values described above
-  Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), sum(m.spas2[,c(1,3:ncol(m.spas2))]),
+  if(square == TRUE) Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), sum(m.spas2[,c(1,3:ncol(m.spas2))]),
                 sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), sum(f.spas2[,c(1,3:ncol(f.spas2))]))
+  
+  if(square == FALSE) dbl <- nrow(m.spas2)/2 + 1
+  
+    if(square == FALSE) Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), (sum(m.spas2[,c(1,3:ncol(m.spas2))])-sum(m.spas2[dbl:nrow(m.spas2), 1])),
+                sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), (sum(f.spas2[,c(1,3:ncol(f.spas2))])-sum(f.spas2[dbl:nrow(f.spas2), 1])))
   
   Validate <- data.frame(Value, Estimate)
   
@@ -345,6 +348,9 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, rec.strata, sex.correct
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
     
+    if(jacks == TRUE) add <- setdiff(j.cor.app[,1], j.t.rec[,1])
+    if(jacks == TRUE) num <- length(add)
+    if(jacks == TRUE & num >0) j.t.rec[(nrow(j.t.rec)+1):(nrow(j.t.rec)+num), 1] <- add
       # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
    if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
     
@@ -408,10 +414,14 @@ NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equ
 SPAS2.input.file(appdat = app, # application data from Section 3, do not change this
                  recdat = rec, # recovery data from Section 3,  do not change this
                  app.strata = ENTER_APP_STRATA , # enter your application strata from the list above
+                 # if there are multiple strata, use c(STRATA1, STRATA2) and change combine.app to = TRUE
+                 combine.app = FALSE ,
                  rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above
+                 combine.rec = FALSE,
                  sex.correction = ENTER_NUMBER , # enter the Male sex correction 
                  name = NAME, # don't need to change
-                 jacks = FALSE) # Change to TRUE if you want an file for Jacks
+                 jacks = FALSE , # Change to TRUE if you want an file for Jacks
+                 sqaure = TRUE) 
 ```
 
 Copy and paste the above code if you want to make multiple stratifications

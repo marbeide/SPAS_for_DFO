@@ -14,6 +14,7 @@
 # Example Data and Outputs
 Example Data/*
 Example Outputs/*
+TroubleShooting/*
 
 # Output files from R CMD build
 /*.tar.gz
