@@ -162,7 +162,7 @@ DO NOT EDIT unless making a commit to the GitHub
 ```{r}
 SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
                               rec.strata, combine.rec,
-                              sex.correction, name, jacks, square){ 
+                              sex.correction, name, jacks){ 
   
   # If combine.app is TRUE, this will unite the strata for subsequent grouping
   if(combine.app == TRUE) combine.by.a <- enquo(app.strata)
@@ -307,6 +307,8 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   Value <- c("Tags.Applied.M","Tags.Recovered.M","Total.Recovered.M",
              "Tags.Applied.F","Tags.Recovered.F","Total.Recovered.F")
   
+  square = TRUE
+  
   #simple column or matrix summations to create the validating values described above
   if(square == TRUE) Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), sum(m.spas2[,c(1,3:ncol(m.spas2))]),
                 sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), sum(f.spas2[,c(1,3:ncol(f.spas2))]))
@@ -349,7 +351,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
     
     if(jacks == TRUE) add <- setdiff(j.cor.app[,1], j.t.rec[,1])
-    if(jacks == TRUE) num <- length(add)
+    if(jacks == TRUE) num <- nrow(add)
     if(jacks == TRUE & num >0) j.t.rec[(nrow(j.t.rec)+1):(nrow(j.t.rec)+num), 1] <- add
       # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
    if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
