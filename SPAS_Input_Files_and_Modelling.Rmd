@@ -473,15 +473,16 @@ make.report <- function(model.list){
          t.p.pool         =-1+ncol(x$fit.setup$pooldata),
          logL.cond        = x$model.info$logL.cond,
          np               = x$model.info$np,
-         kappa.pooled     = x$kappa.after.lp,
-         gof.chisq        = round(x$gof$chisq,1),
+         chapman.est      = round(x$est$N.Chapman, 0),
+         kappa.pooled     = round(x$kappa.after.lp, 0),
+         gof.chisq        = round(x$gof$chisq, 1),
          gof.df           = x$gof$chisq.df,
-         gof.p            = round(x$gof$chisq.p,3)
+         gof.p            = round(x$gof$chisq.p, 3)
          )
       
    })
    report <- mutate(report, deltaAIC = AICc - min(AICc)) %>% arrange(deltaAIC)
-   report <- report[, c(1:3,15,4:14)]
+   report <- report[, c(1:3,16,4:15)]
    report
 }
 ```
