@@ -422,8 +422,7 @@ SPAS2.input.file(appdat = app, # application data from Section 3, do not change 
                  combine.rec = FALSE,
                  sex.correction = ENTER_NUMBER , # enter the Male sex correction 
                  name = NAME, # don't need to change
-                 jacks = FALSE , # Change to TRUE if you want an file for Jacks
-                 sqaure = TRUE) 
+                 jacks = FALSE)  # Change to TRUE if you want an file for Jacks
 ```
 
 Copy and paste the above code if you want to make multiple stratifications
@@ -483,7 +482,7 @@ make.report <- function(model.list){
          )
       
    })
-   report <- mutate(report, deltaAIC = AICc - min(AICc)) %>% arrange(deltaAIC)
+   report <- mutate(report, deltaAIC = round(AICc - min(AICc)), 2) %>% arrange(deltaAIC)
    report <- report[, c(1:3,16,4:15)]
    report
 }
@@ -502,7 +501,7 @@ The below code also rounds all of the data so integers are going into the SPAS f
 Edit the row.pool and col.pool ins to the correct number of strata.
 Copy and paste the function if there are additional poolings that are desired. Remember to increase the mod..#
 ```{r}
-mod..1 <- SPAS.fit.model(males, # make sure data frame is correct
+modM..1 <- SPAS.fit.model(males, # make sure data frame is correct
                            model.id = "Petersen", # change name to desired description
                        row.pool.in = c(1, 1), # add ,1 if its a 3 x 3
                        # REMEMBER - can only pool rows, NOT columns
@@ -513,7 +512,7 @@ mod..1 <- SPAS.fit.model(males, # make sure data frame is correct
 
 # SPAS.print.model(mod..1) # remove hastag if you want to view the individual result
 
-mod..2 <- SPAS.fit.model(males, # make sure data frame is correct
+modM..2 <- SPAS.fit.model(males, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
                        row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
                        # REMEMBER - can only pool rows, NOT columns
@@ -527,16 +526,16 @@ mod..2 <- SPAS.fit.model(males, # make sure data frame is correct
 # Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
 
 
-model.list <- get.models("^mod\\.\\.")
+model.list <- get.models("^modM\\.\\.")
 report.males <- make.report(model.list)
 
-write.xlsx(report.males, paste(NAME, "_males_report.xlsx", sep = ""), row.names = F)
+write.xlsx(report.males, paste(NAME, "_males_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
 # can ignore "Note", likely from packages not all being up to date.
 ```
 
 ## SPAS for Females
 ```{r}
-mod..1 <- SPAS.fit.model(females, # make sure data frame is correct
+modF..1 <- SPAS.fit.model(females, # make sure data frame is correct
                            model.id = "Petersen", # change name to desired description
                        row.pool.in = c(1, 1), # add ,1 if its a 3 x 3
                        # REMEMBER - can only pool rows, NOT columns
@@ -547,7 +546,7 @@ mod..1 <- SPAS.fit.model(females, # make sure data frame is correct
 
 # SPAS.print.model(mod..1)
 
-mod..2 <- SPAS.fit.model(females, # make sure data frame is correct
+modF..2 <- SPAS.fit.model(females, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
                        row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
                        # REMEMBER - can only pool rows, NOT columns
@@ -561,8 +560,41 @@ mod..2 <- SPAS.fit.model(females, # make sure data frame is correct
 # Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
 
 
-model.list <- get.models("^mod\\.\\.")
+model.list <- get.models("^modF\\.\\.")
 report.females <- make.report(model.list)
 
-write.xlsx(report.females, paste(NAME, "_females_report.xlsx", sep = ""), row.names = F)
+write.xlsx(report.females, paste(NAME, "_females_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
+```
+
+## SPAS for Jacks
+```{r}
+modJ..1 <- SPAS.fit.model(jacks, # make sure data frame is correct
+                           model.id = "Petersen", # change name to desired description
+                       row.pool.in = c(1, 1), # add ,1 if its a 3 x 3
+                       # REMEMBER - can only pool rows, NOT columns
+                       col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE) # don't change for now
+
+# SPAS.print.model(mod..1)
+
+modJ..2 <- SPAS.fit.model(jacks, # make sure data frame is correct
+                             model.id = "Stratified", # change name to desired description
+                       row.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       # REMEMBER - can only pool rows, NOT columns
+                       col.pool.in = c(1, 2), # add ,3 if its a 3 x 3
+                       theta.pool = FALSE, 
+                       CJSpool = FALSE,
+                       row.physical.pool=FALSE) # don't change for now
+
+# SPAS.print.model(mod..2)
+
+# Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
+
+
+model.list <- get.models("^modJ\\.\\.")
+report.jacks <- make.report(model.list)
+
+write.xlsx(report.jacks, paste(NAME, "_jacks_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
 ```
