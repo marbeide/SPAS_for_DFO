@@ -467,7 +467,7 @@ make.report <- function(model.list){
       data.frame(#version=x$version,
          date   = as.Date(x$date),
          model.id         = x$model.info$model.id,
-         AICc             = round(x$model.info$AICc, 2),
+         AICc             = round(x$model.info$AICc, 3),
          Nhat             = round(x$est$real$N),
          Nhat.se          = round(x$se $real$N),
          s.a.pool         =-1+nrow(x$fit.setup$pooldata),
@@ -482,7 +482,7 @@ make.report <- function(model.list){
          )
       
    })
-   report <- mutate(report, deltaAIC = round(AICc - min(AICc)), 2) %>% arrange(deltaAIC)
+   report <- mutate(report, deltaAIC = round(AICc - min(AICc)), 3) %>% arrange(deltaAIC)
    report <- report[, c(1:3,16,4:15)]
    report
 }
