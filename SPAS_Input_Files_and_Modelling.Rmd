@@ -467,7 +467,7 @@ make.report <- function(model.list){
       data.frame(#version=x$version,
          date   = as.Date(x$date),
          model.id         = x$model.info$model.id,
-         AICc             = x$model.info$AICc,
+         AICc             = round(x$model.info$AICc, 2),
          Nhat             = round(x$est$real$N),
          Nhat.se          = round(x$se $real$N),
          s.a.pool         =-1+nrow(x$fit.setup$pooldata),
