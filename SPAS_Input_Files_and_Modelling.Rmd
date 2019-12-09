@@ -215,11 +215,15 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     group_by(!!app.strata, !!rec.strata) %>%
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
+   if(combine.app == TRUE & m.t.rec[nrow(m.t.rec),1] == "NA_NA") m.t.rec[nrow(m.t.rec),1] <- NA
 
-    add <- setdiff(m.cor.app[,1], m.t.rec[,1])
+    add <- setdiff(m.cor.app[,1], data.frame(app.strata = na.omit(m.t.rec[,1])))
     num <- nrow(add)
     if(num >0) m.t.rec[(nrow(m.t.rec)+1):(nrow(m.t.rec)+num), 1] <- add
+    m.t.rec <- arrange(m.t.rec, app.strata)
   
+    m.t.rec <- as.data.frame(m.t.rec)
+    
     # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
   m.t.rec[ , 2:ncol(m.t.rec)][is.na(m.t.rec[ , 2:ncol(m.t.rec)])] <- 0
   
@@ -245,7 +249,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   
   write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
               row.names = F, col.names = F, sep = ",")
-  write.table(m.cor.app[,1], paste("SPAS_R_", name, "ROW_STRATA_NAMES.csv", sep = ""), sep = ",")
+  write.table(m.cor.app[,1], paste("SPAS_R_", name, "_ROW_STRATA_NAMES.csv", sep = ""), sep = ",")
  
   # assembles the required columns of the old SPAS 2 (R SPAS) input file AND check
   m.spas2 <- cbind(m.unt.rec[ , -1], m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1])
@@ -274,10 +278,16 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     summarise(tag.recoverd = n()) %>%
     spread(!!rec.strata, tag.recoverd)
   
-    add <- setdiff(f.cor.app[,1], f.t.rec[,1])
+   if(combine.app == TRUE & f.t.rec[nrow(f.t.rec),1] == "NA_NA") f.t.rec[nrow(f.t.rec),1] <- NA
+
+  
+    add <- setdiff(f.cor.app[,1], data.frame(app.strata = na.omit(f.t.rec[,1])))
     num <- nrow(add)
     if(num >0) f.t.rec[(nrow(f.t.rec)+1):(nrow(f.t.rec)+num), 1] <- add
+    f.t.rec <- arrange(f.t.rec, app.strata)
   
+    f.t.rec <- as.data.frame(f.t.rec)
+    
     f.t.rec[ , 2:ncol(f.t.rec)][is.na(f.t.rec[ , 2:ncol(f.t.rec)])] <- 0
   
   if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add <- as.matrix(f.total.rec[,3]) %*% 
@@ -350,10 +360,13 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     group_by(!!app.strata, !!rec.strata) %>%
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
-    
-    if(jacks == TRUE) add <- setdiff(j.cor.app[,1], j.t.rec[,1])
+     if(jacks == TRUE & combine.app == TRUE & j.t.rec[nrow(j.t.rec),1] == "NA_NA") j.t.rec[nrow(j.t.rec),1] <- NA
+
+    if(jacks == TRUE) add <- setdiff(j.cor.app[,1], data.frame(app.strata = na.omit(j.t.rec[,1])))
     if(jacks == TRUE) num <- nrow(add)
     if(jacks == TRUE & num >0) j.t.rec[(nrow(j.t.rec)+1):(nrow(j.t.rec)+num), 1] <- add
+    if(jacks == TRUE) j.t.rec <- arrange(j.t.rec, app.strata)
+    if(jacks == TRUE) j.t.rec <- as.data.frame(j.t.rec)
       # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
    if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
     
@@ -371,15 +384,13 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
 
   # adds the secondary correction to the t by s matrix of tag recoveries
   if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) j.t.rec[!is.na(j.t.rec[,1]), 
-                                              2:ncol(j.t.rec)] <- j.t.rec[!is.na(j.t.rec[,1]), 
-                                                                          2:ncol(j.t.rec)] + secondary.add
+                                              2:ncol(j.t.rec)] <- j.t.rec[!is.na(j.t.rec[,1]), 2:ncol(j.t.rec)] + secondary.add
 
   # assembles new R SPAS input matrix & file
   if(jacks == TRUE) j.spasR <- cbind( j.t.rec[!is.na(j.t.rec[,1]), -1],  j.cor.app[ , -1] - rowSums(j.t.rec[!is.na(j.t.rec[,1]), -1]))
   if(jacks == TRUE) j.spasR <- as.matrix(rbind(j.spasR, c(t(j.unt.rec[ , -1]), 0)))
   
-  if(jacks == TRUE) write.table(j.spasR, paste("SPAS_R_", name, "_input_Jacks.csv", sep = ""), 
-              row.names = F, col.names = F, sep = ",")
+  if(jacks == TRUE) write.table(j.spasR, paste("SPAS_R_", name, "_input_Jacks.csv", sep = ""), row.names = F, col.names = F, sep = ",")
  
 }
 ```
@@ -417,10 +428,10 @@ NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equ
 SPAS2.input.file(appdat = app, # application data from Section 3, do not change this
                  recdat = rec, # recovery data from Section 3,  do not change this
                  app.strata = ENTER_APP_STRATA , # enter your application strata from the list above
-                 # if there are multiple strata, use c(STRATA1, STRATA2) and change combine.app to = TRUE
+                 # if there are multiple strata, use c(STRATA1, STRATA2) and change combine.app to = TRUE. You will also need do a combined rec strata too so that the secondary only recovery fish are applied correctly accross app strata.
                  combine.app = FALSE ,
-                 rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above
-                 combine.rec = FALSE,
+                 rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above. dito, c(StRATA1, STRATA 2) if multiple strata and change below to TRUE
+                 combine.rec = FALSE, 
                  sex.correction = ENTER_NUMBER , # enter the Male sex correction 
                  name = NAME, # don't need to change
                  jacks = FALSE)  # Change to TRUE if you want an file for Jacks
