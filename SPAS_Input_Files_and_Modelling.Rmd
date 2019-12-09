@@ -245,6 +245,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   
   write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
               row.names = F, col.names = F, sep = ",")
+  write.table(m.cor.app[,1], paste("SPAS_R_", name, "ROW_STRATA_NAMES.csv", sep = ""), sep = ",")
  
   # assembles the required columns of the old SPAS 2 (R SPAS) input file AND check
   m.spas2 <- cbind(m.unt.rec[ , -1], m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1])
