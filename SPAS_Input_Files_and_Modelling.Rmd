@@ -360,7 +360,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     group_by(!!app.strata, !!rec.strata) %>%
     summarise(tag.recoverd = n()) %>% # this creates a long form version
     spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
-     if(jacks == TRUE & combine.app == TRUE & j.t.rec[nrow(j.t.rec),1] == "NA_NA") j.t.rec[nrow(j.t.rec),1] <- NA
+     if(jacks == TRUE & combine.app == TRUE) if(j.t.rec[nrow(j.t.rec),1] == "NA_NA") j.t.rec[nrow(j.t.rec),1] <- NA
 
     if(jacks == TRUE) add <- setdiff(j.cor.app[,1], data.frame(app.strata = na.omit(j.t.rec[,1])))
     if(jacks == TRUE) num <- nrow(add)
