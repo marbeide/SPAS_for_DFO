@@ -220,7 +220,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     add <- setdiff(m.cor.app[,1], data.frame(app.strata = na.omit(m.t.rec[,1])))
     num <- nrow(add)
     if(num >0) m.t.rec[(nrow(m.t.rec)+1):(nrow(m.t.rec)+num), 1] <- add
-    m.t.rec <- arrange(m.t.rec, app.strata)
+    m.t.rec <- arrange(m.t.rec, !!app.strata)
   
     m.t.rec <- as.data.frame(m.t.rec)
     
@@ -284,7 +284,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     add <- setdiff(f.cor.app[,1], data.frame(app.strata = na.omit(f.t.rec[,1])))
     num <- nrow(add)
     if(num >0) f.t.rec[(nrow(f.t.rec)+1):(nrow(f.t.rec)+num), 1] <- add
-    f.t.rec <- arrange(f.t.rec, app.strata)
+    f.t.rec <- arrange(f.t.rec, !!app.strata)
   
     f.t.rec <- as.data.frame(f.t.rec)
     
@@ -365,7 +365,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
     if(jacks == TRUE) add <- setdiff(j.cor.app[,1], data.frame(app.strata = na.omit(j.t.rec[,1])))
     if(jacks == TRUE) num <- nrow(add)
     if(jacks == TRUE & num >0) j.t.rec[(nrow(j.t.rec)+1):(nrow(j.t.rec)+num), 1] <- add
-    if(jacks == TRUE) j.t.rec <- arrange(j.t.rec, app.strata)
+    if(jacks == TRUE) j.t.rec <- arrange(j.t.rec, !!app.strata)
     if(jacks == TRUE) j.t.rec <- as.data.frame(j.t.rec)
       # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
    if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
