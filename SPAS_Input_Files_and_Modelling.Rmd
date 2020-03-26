@@ -196,7 +196,8 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   m.cor.app <- filter(appdat, Application.Sex == "M") %>% 
     group_by(!!app.strata) %>% # creating a row for each app strata
     summarise(applied = n()) %>% # n() plus group by does the same thing as count()
-    mutate(applied = applied+sex.cor$applied) # adding the sex correction
+    mutate(applied = applied+sex.cor$applied, # adding the sex correction
+           pr = applied/sum(applied)) # proportion applied in each strata
   
   # create sum of Untagged fish recovered per recovery strata
   m.unt.rec <- recdat %>% 
@@ -207,7 +208,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   m.total.rec <- recdat %>% 
     group_by(!!rec.strata) %>%
     summarise(total.rec = sum(Tagged.Males + Untagged.Males)) %>%
-    mutate(pr = total.rec/sum(total.rec))
+    mutate(pr = total.rec/sum(total.rec)) # proportion recovered in each strata
 
   # t by s matrix of number of tags recovered in strata t by application strata s
   m.t.rec <- appdat %>%
@@ -230,8 +231,8 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   
   # if there are secondary only recoveries the next three blocks will run
   
-  # takes the proportion column from m.total.rec and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
-  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add <- as.matrix(m.total.rec[,3]) %*% 
+  # takes the proportion column from m.cor.app and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
+  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add <- as.matrix(m.cor.app[,3]) %*% 
     as.matrix(m.t.rec[is.na(m.t.rec[,1]) , 2:ncol(m.t.rec)])
 
   # if there are any NA's because there were no secondary only recoveries in a particular strata, this replaces them with a 0 (I don't know why I had to make an equivelant number of 0s to NAs...)  
@@ -244,7 +245,7 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
                                                                           2:ncol(m.t.rec)] + secondary.add
 
     # assembles new R SPAS input matrix & file
-  m.spasR <- cbind( m.t.rec[!is.na(m.t.rec[,1]), -1],  m.cor.app[ , -1] - rowSums(m.t.rec[!is.na(m.t.rec[,1]), -1]))
+  m.spasR <- cbind( m.t.rec[!is.na(m.t.rec[,1]), -1],  m.cor.app[ , m.cor.app$applied ] - rowSums(m.t.rec[!is.na(m.t.rec[,1]), -1]))
   m.spasR <- as.matrix(rbind(m.spasR, c(t(m.unt.rec[ , -1]), 0)))
   
   write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
