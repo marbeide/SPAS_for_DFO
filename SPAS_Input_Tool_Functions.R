@@ -2,7 +2,7 @@
 
 SPAS.input.file <- function(appdat, recdat, app.strata, combine.app,
                             rec.strata, combine.rec,
-                            sex.correction, name, sex.include = c("M", "F")){ 
+                            sex.correction, name, sex.include){ 
   
   # If combine.app is TRUE, this will unite the strata for subsequent grouping
   if(combine.app == TRUE) combine.by.a <- enquo(app.strata)

@@ -6,38 +6,42 @@ output:
   rmarkdown::html_vignette: default
   html: default
 created: '2018-11-26'
+updated: '2020-03-27'
 ---
 
 # Intro to R Studio and Using this .Rmd script
-This "R Markdown" (.Rmd) files works best when used in R studio. If you are unfamiliar with R Studio, this book: https://bookdown.org/ndphillips/YaRrr/the-four-rstudio-windows.html has a good intro to the different Windows and features as well as other info about using R.
+This "R Markdown" (.Rmd) files works well when used in R studio. If you are unfamiliar with R Studio, this book: https://bookdown.org/ndphillips/YaRrr/the-four-rstudio-windows.html has a good intro to the different Windows and features as well as other info about using R.  
 
-This Markdown file contains a function that produces the SPAS input file from the MACH2 xlsm file WB5PopEstimator.
+This Markdown file contains a function that produces the SPAS input file from the MACH2 xlsm file WB5PopEstimator.  
 
-The steps to running this markdown file are as follows:
-1) Install & Load Packages
-1.5) Set Working Directory (to location of MACH2 files for specific project-year) IF-NEED-BE
-2) Read in Data
-3) Check and Rename Columns
-4) Run function code chunk #1
-5) Specify Strata and Sex Correction
-6) Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm
-7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location
-8) Double Check SPAS2_input.csv(s) by opening them
-9) Run function code chunk #2
-10) Run SPAS!
+The steps to running this markdown file are as follows:  
+1) Install & Load Packages & Functions  
+2) Set Working Directory (to location of MACH2 files for specific project-year) IF-NEED-BE  
+3) Read in Data  
+4) Check and Rename Columns  
+5) Specify Strata and Sex Correction  
+6) Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm  
+7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location  
+8) Double Check SPAS2_input.csv(s) by opening them  
+9) Run SPAS!  
+10) Save and Rename this file to the system and year it belongs to
 
-The format of the SPAS_R_input.csv(s) (one will be _Female and one _Male) is a matrix of s+1 by t+1 (where s = number of application strata and t = number of recovery strata)
+
+## SPAS R input file format
+The format of the SPAS_R_input.csv(s) is a matrix of s+1 by t+1 (where s = number of application strata and t = number of recovery strata)
 Cell s+1 by t+1 will always be 0
 Column t+1 = contains the number of animals marked in each row stratum but not recovered in any column stratum.
 Row s+1 = contains the total number of UNMARKED animals recovered in column stratum it's in.
 All of the other cells are the number of recovered MARKED individuals of stratum s by t
 
-!!!For first time .Rmd users!!!
-To Run code, either click the green "play" button for a given "chunk"" or click to the line you want to run and click "Run" at the top of this pane or click crt+enter if on a pc or cmd+enter on a mac.
-Chunks are created by '''{r} and ended by '''
+## Instructions for first time .Rmd users
+To Run code, either click the green "play" button for a given "chunk" (right hand side of chunk) or click to the line you want to run and then either click "Run" at the top of this pane or click crt+enter if on a pc or cmd+enter if on a mac.  
+Chunks are denoted by '''{r} and ended by '''
 
-Subsequent Sections will have instructions
+Run every chunk in sequence.  
+Subsequent Sections will have instructions.  
 
+## This chunk gives you a "clean slate"
 ```{r}
 rm(list=ls()) # clears global environment if need-be, this can generally be ignored
 ```
@@ -74,7 +78,7 @@ library(SPAS)
 source("SPAS_Input_Tool_Functions.R") # reads in functions from associated R script
 ```
 
-#1.5 Set Working Directory
+#2 Set Working Directory
 This step is only needed if your working directory isn't where your files are!
 ```{r}
 getwd() # you can either check with this or by looking at the Files tab in the plots window
@@ -82,7 +86,7 @@ getwd() # you can either check with this or by looking at the Files tab in the p
 
 Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
 
-#2 Read In Data
+#3 Read In Data
 Read in data from "WB5PopEstimator.xlsm"
 The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" sheets as long as they have not changed position in MACH2.
 i.e. if there have been changes to MACH2, you will need to change the numbers after "sheet = " so that they match the above respectively
@@ -93,11 +97,12 @@ app <- read.xlsx("WB5PopEstimator.xlsm", sheet = 4, detectDates = F)
 rec <- read.xlsx("WB5PopEstimator.xlsm", sheet = 5, detectDates = F)
 ```
 
-# 3 Check and Rename Columns
+# 4 Check and Rename Columns
 
 The next chunk renames those troublesome strata column names with "=" and " ' " and other symbols that confuse R.
 
 !!!Need to check if these are in fact the columns present and in the right place!!!
+*** Note: MACH2 does not carry-over the names given in the original stratification tool, so you will need to figure out what matches with what in the excel workbooks
 
 Run this chunk
 ```{r}
@@ -116,10 +121,10 @@ colnames(app)[47] == "Application.strata:.extra2"
 # if all are TRUE, you likely do not need to modify the below, if FALSE, you will have to find the correct positions
 ```
 
-If your column names looks like they match the names below, then just run that chunk.
-Otherwise, you may have to renumber which columns are being changed and what your new column names are.
+If your column names looks like they match the names below, then just run that chunk.  
+Otherwise, you may have to renumber which columns are being changed and what your new column names are.  
 
-Please only use letters, numbers, and underscores in your names.
+Please only use letters, numbers, and underscores in your names when you make new column names. NO SPACES.  
 The most essential column names to change are the ones that you are going to use. You may ignore changing the rest if desired.
 
 ```{r}
@@ -151,31 +156,16 @@ colnames(rec)[17:23] <- c("rec_equal_days", "rec_equal_effort", "rec_equal_numbe
 ```
 
 #5 Specify Strata and Corrections
-In the chunk below these instructions, do the following:
+In the chunk below, do the following:
 
-i) Enter the decided upon strata after the = sign 
-for app.strata and rec.strata where it says ENTER_APP_STRATA and ENTER_REC_STRATA
+  i) Enter the decided upon strata after the = sign 
+     for app.strata and rec.strata where it says ENTER_APP_STRATA and ENTER_REC_STRATA
 
 e.g. app.strata = app_equal_days , 
      rec.strata = rec_equal_numbers ,
 
-List of possible choices for app and rec strata:
 
-app_equal_days 
-app_equal_effort 
-app_equal_numbers
-app_equal_area 
-app_equal_recaps 
-app_equal_extra1
-
-rec_equal_days 
-rec_equal_effort 
-rec_equal_numbers
-rec_equal_area 
-rec_equal_extra2
-
-
-ii) Replace ENTER_NUMBER text withthe Male sex correction factor after the = sign for sex.correction
+  ii) Replace ENTER_NUMBER text withthe Male sex correction factor after the = sign for sex.correction
                           
 ```{r}
 NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equal_days
@@ -187,33 +177,30 @@ SPAS2.input.file(appdat = app, # application data from Section 3, do not change 
                  combine.app = FALSE ,
                  rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above. dito, c(StRATA1, STRATA 2) if multiple strata and change below to TRUE
                  combine.rec = FALSE, 
-                 sex.correction = ENTER_NUMBER , # enter the Male sex correction 
+                 sex.correction = ENTER_NUMBER , # enter the Male sex correction from 1WB1SexCF.xlsm
                  name = NAME, # don't need to change
-                 jacks = FALSE)  # Change to TRUE if you want an file for Jacks
+                  sex.include = c("M", "F"))  # Add ,"J" if you want an file for Jacks, or remove one if you only want one of the sexes
 ```
 
 Copy and paste the above code if you want to make multiple stratifications
 
 #6 Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm
 
-There should be an output in the R Console of 6 values, 
-use these values to validate that R has counted or added up the same numbers that correspond in the PopEstimatorPRT sheet int he WB5PopEstimator.xlsm file.
+There should be an output in the R Console of values for each sex. Use these values to validate that R has counted or added up the same numbers that correspond in the PopEstimatorPRT sheet int he WB5PopEstimator.xlsm file.
 
 If they don't... something has gone awry.
 
-#7 Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location
+#7 Locate SPAS_input.csv(s) in MACH2 folder (working directory)
 
-The function automatically created the outputs and placed them in your working directory you chose in Step #2.
-They are named SPAS2_input_Males.csv and SPAS2_input_Females.csv
-Move them to the desired folder (possibly your SPAS2 analysis folder?) and rename them if desired
+The function automatically created the input files and placed them in your working directory you chose in Step #2.  
+They are named SPAS_R_..._input_SEX.csv
 
-#8 Triple Check SPAS2_input.csv(s) by opening them
+#8 Triple Check SPAS_input.csv(s) by opening them
 You can do a triple check here by summing the correct columns to again make sure the sums add to the ones in the MACH2 files.
 Just make sure you don't save those column sums!
+ALSO make sure that there is a 0 in the bottom right cell.
 
-Taadaa! Your file is ready to be read by SPAS2 (R SPAS)
-
-#10 Run SPAS!
+#9 Run SPAS!
 ## Read SPAS Input Files
 Should just be able to press play to load in whatever was the last dataframe that was created.
 The below code also rounds all of the data so integers are going into the SPAS function.
@@ -221,6 +208,10 @@ The below code also rounds all of the data so integers are going into the SPAS f
 (males <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, "_input_Males.csv", sep = ""), header = F)),0)) # rename if you are using multiple stratifications
 (females <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, "_input_Females.csv", sep = ""), header = F)),0))
 ```
+
+### NOTES ON SPAS
+- ONLY Rows can be pooled, NOT columns.  
+- There MUST be more columns than rows after stratifying.
 
 ## SPAS for Males
 Edit the row.pool and col.pool ins to the correct number of strata.
