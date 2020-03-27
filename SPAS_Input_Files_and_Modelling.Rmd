@@ -198,6 +198,8 @@ SPAS.input.file <- function(appdat, recdat, app.strata, combine.app,
  
   for(i in sex.include){
     
+    # quosures are used by TidyVerse functions. Only went this route because I had already done everything in tidyverse.
+    # the below quosures are used throughout the rest of the loop
       unt.sex <- switch(i, "M" = quo(Untagged.Males), "F" = quo(Untagged.Females), "J" = quo(Untagged.Jacks))
       tag.sex <- switch(i, "M" = quo(Tagged.Males), "F" = quo(Tagged.Females), "J" = quo(Tagged.Jacks))
       SEX <- switch(i, "M" = "Male", "F" = "Female", "J" = "Jack")
@@ -227,7 +229,8 @@ SPAS.input.file <- function(appdat, recdat, app.strata, combine.app,
     mutate(marked = total.rec - untagged.rec)
   
   if(any(CHECK.marked$marked <= 0)) cat(paste0("No marked ", SEX, " recoveries in strata \n Input file for ", SEX, " not created"))
-  if(any(CHECK.marked$marked > 0)){
+  # if there are no marked recoveries in one of the recovery strata, the loop stops here and produces the above message
+  if(any(CHECK.marked$marked > 0)){ # if all good, the loop continues
   
   # t by s matrix of number of tags recovered in strata t by application strata s
   t.rec <- appdat %>%
