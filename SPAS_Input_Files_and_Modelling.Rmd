@@ -160,9 +160,11 @@ Male Correction = 1 + Value.
 Press the play button (right hand side) and then minimize with the arrow by the line nubmers (on the left hand side)
 DO NOT EDIT unless making a commit to the GitHub
 ```{r}
-SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
-                              rec.strata, combine.rec,
-                              sex.correction, name, jacks){ 
+# SPAS input file formatting function
+
+SPAS.input.file <- function(appdat, recdat, app.strata, combine.app,
+                             rec.strata, combine.rec,
+                             sex.correction, name, sex.include = c("M", "F")){ 
   
   # If combine.app is TRUE, this will unite the strata for subsequent grouping
   if(combine.app == TRUE) combine.by.a <- enquo(app.strata)
@@ -181,219 +183,105 @@ SPAS2.input.file <- function(appdat, recdat, app.strata, combine.app,
   
   correction = sex.correction
   
-    # create sex corrected applications~app strata  
+  # create sex corrected applications~app strata  
   sex.cor <- filter(appdat, Application.Sex %in% c("M", "F")) %>% 
     group_by(!!app.strata) %>% # creating a row for each app strata
     summarise(applied = n()) %>% # n() plus group by does the same thing as count()
-    mutate(applied = applied*(correction)) # the sex correction per strata
+    mutate(Tagged.Males = applied*(correction),
+           Tagged.Females = -Tagged.Males,
+           Tagged.Jacks = 0) # the sex correction per strata
   
   # This function is two sets of the "same" code, one for Males and one for Females
-  # Male code is denoted by m.
+  # Male code is denoted by 
   # Female code is denoted by f.
   # Only the first set of steps is annotated
-  
-  # add sex corrected applications~app strata  
-  m.cor.app <- filter(appdat, Application.Sex == "M") %>% 
+ 
+  for(i in sex.include){
+    
+      unt.sex <- switch(i, "M" = quo(Untagged.Males), "F" = quo(Untagged.Females), "J" = quo(Untagged.Jacks))
+      tag.sex <- switch(i, "M" = quo(Tagged.Males), "F" = quo(Tagged.Females), "J" = quo(Tagged.Jacks))
+      SEX <- switch(i, "M" = "Male", "F" = "Female", "J" = "Jack")
+   
+  # add sex corrected applications~app strata 
+      tagged.sex.cor <- pull(sex.cor, !!tag.sex)
+      
+  cor.app <- filter(appdat, Application.Sex == i) %>% 
     group_by(!!app.strata) %>% # creating a row for each app strata
     summarise(applied = n()) %>% # n() plus group by does the same thing as count()
-    mutate(applied = applied+sex.cor$applied, # adding the sex correction
+    mutate(applied = applied + tagged.sex.cor, # adding the sex correction
            pr = applied/sum(applied)) # proportion applied in each strata
   
   # create sum of Untagged fish recovered per recovery strata
-  m.unt.rec <- recdat %>% 
+  unt.rec <- recdat %>% 
     group_by(!!rec.strata) %>%
-    summarise(untagged.rec = sum(Untagged.Males))
+    summarise(untagged.rec = sum(!!unt.sex))
   
   # create column for total recoveryies and proportion recovered in each strata that will be used for redistributing secondary marked fish to application strata proportional to the recovery strata they were found in
-  m.total.rec <- recdat %>% 
+  total.rec <- recdat %>% 
     group_by(!!rec.strata) %>%
-    summarise(total.rec = sum(Tagged.Males + Untagged.Males)) %>%
+    summarise(total.rec = sum(!!tag.sex + !!unt.sex)) %>%
     mutate(pr = total.rec/sum(total.rec)) # proportion recovered in each strata
-
-  # t by s matrix of number of tags recovered in strata t by application strata s
-  m.t.rec <- appdat %>%
-    filter(Recovery.Sex == "M") %>%
-    group_by(!!app.strata, !!rec.strata) %>%
-    summarise(tag.recoverd = n()) %>% # this creates a long form version
-    spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
-   if(combine.app == TRUE & m.t.rec[nrow(m.t.rec),1] == "NA_NA") m.t.rec[nrow(m.t.rec),1] <- NA
-
-    add <- setdiff(m.cor.app[,1], data.frame(app.strata = na.omit(m.t.rec[,1])))
-    num <- nrow(add)
-    if(num >0) m.t.rec[(nrow(m.t.rec)+1):(nrow(m.t.rec)+num), 1] <- add
-    m.t.rec <- arrange(m.t.rec, !!app.strata)
   
-    m.t.rec <- as.data.frame(m.t.rec)
-    
-    # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
-  m.t.rec[ , 2:ncol(m.t.rec)][is.na(m.t.rec[ , 2:ncol(m.t.rec)])] <- 0
+  # Check to see if there were NO marked recoveries in any of the strata
+  CHECK.marked <- merge(total.rec, unt.rec) %>%
+    mutate(marked = total.rec - untagged.rec)
+  
+  if(any(CHECK.marked$marked <= 0)) cat(paste0("No marked ", SEX, " recoveries in strata \n Input file for ", SEX, " not created"))
+  if(any(CHECK.marked$marked > 0)){
+  
+  # t by s matrix of number of tags recovered in strata t by application strata s
+  t.rec <- appdat %>%
+    filter(Recovery.Sex == i) %>%
+    group_by(!!app.strata, !!rec.strata) %>%
+    summarise(tag.recoverd = n()) %>% # this creates a long form summary
+    spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
+  if(combine.app == TRUE & t.rec[nrow(t.rec),1] == "NA_NA") t.rec[nrow(t.rec),1] <- NA
+  
+  add <- setdiff(cor.app[,1], data.frame(app.strata = na.omit(t.rec[,1])))
+  num <- nrow(add)
+  if(num >0) t.rec[(nrow(t.rec)+1):(nrow(t.rec)+num), 1] <- add
+  t.rec <- arrange(t.rec, !!app.strata) # only works if its dates or the app strata are alphabetical
+  
+  t.rec <- as.data.frame(t.rec) # needed to do this because funky things were happening when it was a tibble
+  
+  # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
+  t.rec[ , 2:ncol(t.rec)][is.na(t.rec[ , 2:ncol(t.rec)])] <- 0
   
   
   # if there are secondary only recoveries the next three blocks will run
   
-  # takes the proportion column from m.cor.app and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
-  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add <- as.matrix(m.cor.app[,3]) %*% 
-    as.matrix(m.t.rec[is.na(m.t.rec[,1]) , 2:ncol(m.t.rec)])
-
+  # takes the proportion column from cor.app and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
+  if(is.na(t.rec[nrow(t.rec),1])) secondary.add <- as.matrix(cor.app[,3]) %*% 
+    as.matrix(t.rec[is.na(t.rec[,1]) , 2:ncol(t.rec)])
+  
   # if there are any NA's because there were no secondary only recoveries in a particular strata, this replaces them with a 0 (I don't know why I had to make an equivelant number of 0s to NAs...)  
-  if(is.na(m.t.rec[nrow(m.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
+  if(is.na(t.rec[nrow(t.rec),1])) secondary.add[is.na(secondary.add)] <- 
     rep(0, length(secondary.add[is.na(secondary.add)]))
-
+  
   # adds the secondary correction to the t by s matrix of tag recoveries
-  if(is.na(m.t.rec[nrow(m.t.rec),1])) m.t.rec[!is.na(m.t.rec[,1]), 
-                                              2:ncol(m.t.rec)] <- m.t.rec[!is.na(m.t.rec[,1]), 
-                                                                          2:ncol(m.t.rec)] + secondary.add
-
-    # assembles new R SPAS input matrix & file
-  m.spasR <- cbind( m.t.rec[!is.na(m.t.rec[,1]), -1],  m.cor.app[ , m.cor.app$applied ] - rowSums(m.t.rec[!is.na(m.t.rec[,1]), -1]))
-  m.spasR <- as.matrix(rbind(m.spasR, c(t(m.unt.rec[ , -1]), 0)))
-  
-  write.table(m.spasR, paste("SPAS_R_", name, "_input_Males.csv", sep = ""), 
-              row.names = F, col.names = F, sep = ",")
-  write.table(m.cor.app[,1], paste("SPAS_R_", name, "_ROW_STRATA_NAMES.csv", sep = ""), sep = ",")
- 
-  # assembles the required columns of the old SPAS 2 (R SPAS) input file AND check
-  m.spas2 <- cbind(m.unt.rec[ , -1], m.cor.app[ , -1], m.t.rec[!is.na(m.t.rec[,1]), -1])
-  m.spas2 <- as.matrix(m.spas2) # makes it a matrix for easy csv saving with no column names
-  
-      ####################################################################################################
-  #  Dito for Females because looping sum(Untagged.Males) vs. sum(Untagged.Females) doesn't gain much#
-  
-  f.cor.app <- filter(appdat, Application.Sex == "F") %>% 
-    group_by(!!app.strata) %>%
-    summarise(applied = n()) %>%
-    mutate(applied = applied-sex.cor$applied) # noting that this is substract for females
-  
-  f.unt.rec <- recdat %>% 
-    group_by(!!rec.strata) %>%
-    summarise(untagged.rec = sum(Untagged.Females))
-  
-  f.total.rec <- recdat %>% 
-    group_by(!!rec.strata) %>%
-    summarise(total.rec = sum(Tagged.Females + Untagged.Females)) %>%
-    mutate(pr = total.rec/sum(total.rec))
-  
-  f.t.rec <- appdat %>%
-    filter(Recovery.Sex == "F") %>%
-    group_by(!!app.strata, !!rec.strata) %>%
-    summarise(tag.recoverd = n()) %>%
-    spread(!!rec.strata, tag.recoverd)
-  
-   if(combine.app == TRUE & f.t.rec[nrow(f.t.rec),1] == "NA_NA") f.t.rec[nrow(f.t.rec),1] <- NA
-
-  
-    add <- setdiff(f.cor.app[,1], data.frame(app.strata = na.omit(f.t.rec[,1])))
-    num <- nrow(add)
-    if(num >0) f.t.rec[(nrow(f.t.rec)+1):(nrow(f.t.rec)+num), 1] <- add
-    f.t.rec <- arrange(f.t.rec, !!app.strata)
-  
-    f.t.rec <- as.data.frame(f.t.rec)
-    
-    f.t.rec[ , 2:ncol(f.t.rec)][is.na(f.t.rec[ , 2:ncol(f.t.rec)])] <- 0
-  
-  if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add <- as.matrix(f.total.rec[,3]) %*% 
-    as.matrix(f.t.rec[is.na(f.t.rec[,1]) , 2:ncol(f.t.rec)])
-  
-  if(is.na(f.t.rec[nrow(f.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
-    rep(0, length(secondary.add[is.na(secondary.add)]))
-  
-  if(is.na(f.t.rec[nrow(f.t.rec),1])) f.t.rec[!is.na(f.t.rec[,1]), 
-                                              2:ncol(f.t.rec)] <- f.t.rec[!is.na(f.t.rec[,1]), 
-                                                                          2:ncol(f.t.rec)] + secondary.add
+  if(is.na(t.rec[nrow(t.rec),1])) t.rec[!is.na(t.rec[,1]), 
+                                              2:ncol(t.rec)] <- t.rec[!is.na(t.rec[,1]), 
+                                                                          2:ncol(t.rec)] + secondary.add
   
   # assembles new R SPAS input matrix & file
-  f.spasR <- cbind( f.t.rec[!is.na(f.t.rec[,1]), -1],  f.cor.app[ , -1] - 
-                      rowSums(f.t.rec[!is.na(f.t.rec[,1]), -1]))
-  f.spasR <- as.matrix(rbind(f.spasR, c(t(f.unt.rec[ , -1]), 0)))
+  spasR <- cbind( t.rec[!is.na(t.rec[,1]), -1],  cor.app[ , 2] - rowSums(t.rec[!is.na(t.rec[,1]), -1]))
+  spasR <- as.matrix(rbind(spasR, c(t(unt.rec[ , -1]), 0)))
   
-    write.table(f.spasR, paste("SPAS_R_", name, "_input_Females.csv", sep = ""), 
+  write.table(spasR, paste0("SPAS_R_", name, "_input_", SEX, "s.csv"), 
               row.names = F, col.names = F, sep = ",")
- 
-  # assembles the required columns of the old SPAS 2 (R SPAS) input file
-  f.spas2 <- cbind(f.unt.rec[ , -1], f.cor.app[ , -1], f.t.rec[!is.na(f.t.rec[,1]), -1])
-  f.spas2 <- as.matrix(f.spas2)
-     
-  ####################################################################################################
-  # Print Values for Validating with MACH2
+  write.table(cor.app[,1], paste0("SPAS_R_", name, "_for_", SEX, "s_ROW_STRATA_NAMES.csv"), sep = ",")
   
-  Value <- c("Tags.Applied.M","Tags.Recovered.M","Total.Recovered.M",
-             "Tags.Applied.F","Tags.Recovered.F","Total.Recovered.F")
-  
-  square = TRUE
-  
-  #simple column or matrix summations to create the validating values described above
-  if(square == TRUE) Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), sum(m.spas2[,c(1,3:ncol(m.spas2))]),
-                sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), sum(f.spas2[,c(1,3:ncol(f.spas2))]))
-  
-  if(square == FALSE) dbl <- nrow(m.spas2)/2 + 1
-  
-    if(square == FALSE) Estimate <- c(sum(m.spas2[,2]), sum(m.spas2[,3:ncol(m.spas2)]), (sum(m.spas2[,c(1,3:ncol(m.spas2))])-sum(m.spas2[dbl:nrow(m.spas2), 1])),
-                sum(f.spas2[,2]), sum(f.spas2[,3:ncol(f.spas2)]), (sum(f.spas2[,c(1,3:ncol(f.spas2))])-sum(f.spas2[dbl:nrow(f.spas2), 1])))
-  
-  Validate <- data.frame(Value, Estimate)
-  
-    print(Validate)
-    
-    ####################################################################################################
-  #  Dito for Jacks because looping sum(Untagged.Males) vs. sum(Untagged.Females) doesn't gain much#
-
-        
-      # creating applications~app strata  
-  if(jacks == TRUE) j.cor.app <- filter(appdat, Application.Sex == "J") %>% 
-    group_by(!!app.strata) %>% # creating a row for each app strata
-    summarise(applied = n())# n() plus group by does the same thing as count()
-      
-  
-  # create sum of Untagged fish recovered per recovery strata
-  if(jacks == TRUE) j.unt.rec <- recdat %>% 
-    group_by(!!rec.strata) %>%
-    summarise(untagged.rec = sum(Untagged.Jacks))
-  
-  # create column for total recoveryies and proportion recovered in each strata that will be used for redistributing secondary marked fish to application strata proportional to the recovery strata they were found in
-  if(jacks == TRUE) j.total.rec <- recdat %>% 
-    group_by(!!rec.strata) %>%
-    summarise(total.rec = sum(Tagged.Jacks + Untagged.Jacks)) %>%
-    mutate(pr = total.rec/sum(total.rec))
-
-  # t by s matrix of number of tags recovered in strata t by application strata s
-  if(jacks == TRUE) j.t.rec <- appdat %>%
-    filter(Recovery.Sex == "J") %>%
-    group_by(!!app.strata, !!rec.strata) %>%
-    summarise(tag.recoverd = n()) %>% # this creates a long form version
-    spread(!!rec.strata, tag.recoverd) # this changes it to the wide form t by s matrix
-     if(jacks == TRUE & combine.app == TRUE) if(j.t.rec[nrow(j.t.rec),1] == "NA_NA") j.t.rec[nrow(j.t.rec),1] <- NA
-
-    if(jacks == TRUE) add <- setdiff(j.cor.app[,1], data.frame(app.strata = na.omit(j.t.rec[,1])))
-    if(jacks == TRUE) num <- nrow(add)
-    if(jacks == TRUE & num >0) j.t.rec[(nrow(j.t.rec)+1):(nrow(j.t.rec)+num), 1] <- add
-    if(jacks == TRUE) j.t.rec <- arrange(j.t.rec, !!app.strata)
-    if(jacks == TRUE) j.t.rec <- as.data.frame(j.t.rec)
-      # need to fill in if any recovery spot in the app strata had a 0, all of the subsetting is to ignore if there are NAs in the app_strata column as it is used as a check to apply secondary mark only recoveries
-   if(jacks == TRUE) j.t.rec[ , 2:ncol(j.t.rec)][is.na(j.t.rec[ , 2:ncol(j.t.rec)])] <- 0
-    
-    
-
-  # if there are secondary only recoveries the next three blocks will run
-  
-  # takes the proportion column from j.total.rec and uses matrix multiplication to distribute the number of secondary recoveries from each t strata to a t by s matrix
-  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) secondary.add <- as.matrix(j.total.rec[,3]) %*% 
-    as.matrix(j.t.rec[is.na(j.t.rec[,1]) , 2:ncol(j.t.rec)])
-
-  # if there are any NA's because there were no secondary only recoveries in a particular strata, this replaces them with a 0 (I don't know why I had to make an equivelant number of 0s to NAs...)  
-  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) secondary.add[is.na(secondary.add)] <- 
-    rep(0, length(secondary.add[is.na(secondary.add)]))
-
-  # adds the secondary correction to the t by s matrix of tag recoveries
-  if(jacks == TRUE) if(is.na(j.t.rec[nrow(j.t.rec),1])) j.t.rec[!is.na(j.t.rec[,1]), 
-                                              2:ncol(j.t.rec)] <- j.t.rec[!is.na(j.t.rec[,1]), 2:ncol(j.t.rec)] + secondary.add
-
-  # assembles new R SPAS input matrix & file
-  if(jacks == TRUE) j.spasR <- cbind( j.t.rec[!is.na(j.t.rec[,1]), -1],  j.cor.app[ , -1] - rowSums(j.t.rec[!is.na(j.t.rec[,1]), -1]))
-  if(jacks == TRUE) j.spasR <- as.matrix(rbind(j.spasR, c(t(j.unt.rec[ , -1]), 0)))
-  
-  if(jacks == TRUE) write.table(j.spasR, paste("SPAS_R_", name, "_input_Jacks.csv", sep = ""), row.names = F, col.names = F, sep = ",")
- 
-}
+  cat(paste0("\n", "SPAS_R_", name, " input and strata names has been created for ", SEX, "s \n \n"))
+  cat(paste0("Sex corrected values for comparison with ", SEX, 
+             " PopEstimatorPRT tab in WB5PopEstimator.xlsx \n * Note that only Applied may be different due to sex correction \n \n"))
+  cat(SEX)
+  cat("Tags Applied:", sum(spasR[-nrow(spasR), ]), "\n")
+  cat("Tagged Recoveries:", sum(spasR[-nrow(spasR), -ncol(spasR)]), "\n")
+  cat("Total Recoveries:", sum(spasR[,-ncol(spasR)]), "\n")
+  cat("\n", "------------------------------------------------------------", "\n")
+  } # end of sex.include loop
+  } # end of IF statement if no tags recovered in one or more recovery strata
+} # end of SPAS.input.file function
 ```
 
 #5 Specify Strata and Corrections
