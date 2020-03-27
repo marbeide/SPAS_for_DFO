@@ -19,7 +19,7 @@ The steps to running this markdown file are as follows:
 2) Set Working Directory (to location of MACH2 files for specific project-year) IF-NEED-BE  
 3) Read in Data  
 4) Check and Rename Columns  
-5) Specify Strata and Sex Correction  
+5) Create Input File  
 6) Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm  
 7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location  
 8) Double Check SPAS2_input.csv(s) by opening them  
@@ -155,7 +155,7 @@ colnames(rec)[17:23] <- c("rec_equal_days", "rec_equal_effort", "rec_equal_numbe
                           "rec_equal_extra2")
 ```
 
-#5 Specify Strata and Corrections
+#5 Create Input File
 In the chunk below, do the following:
 
   i) Enter the decided upon strata after the = sign 
@@ -170,7 +170,7 @@ e.g. app.strata = app_equal_days ,
 ```{r}
 NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equal_days
 
-SPAS2.input.file(appdat = app, # application data from Section 3, do not change this
+SPAS.input.file(appdat = app, # application data from Section 3, do not change this
                  recdat = rec, # recovery data from Section 3,  do not change this
                  app.strata = ENTER_APP_STRATA , # enter your application strata from the list above
                  # if there are multiple strata, use c(STRATA1, STRATA2) and change combine.app to = TRUE. You will also need do a combined rec strata too so that the secondary only recovery fish are applied correctly accross app strata.
@@ -212,6 +212,7 @@ The below code also rounds all of the data so integers are going into the SPAS f
 ### NOTES ON SPAS
 - ONLY Rows can be pooled, NOT columns.  
 - There MUST be more columns than rows after stratifying.
+- Chapman Estimate may not match 100 % due to rounding error as SPAS requires whole numbers and excel is using decimals.
 
 ## SPAS for Males
 Edit the row.pool and col.pool ins to the correct number of strata.
