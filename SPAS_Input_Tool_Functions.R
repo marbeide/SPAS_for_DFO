@@ -66,9 +66,10 @@ SPAS.input.file <- function(appdat, recdat, app.strata, combine.app,
     CHECK.marked <- merge(total.rec, unt.rec) %>%
       mutate(marked = total.rec - untagged.rec)
     
-    if(any(CHECK.marked$marked <= 0)) cat(paste0("No marked ", SEX, " recoveries in strata \n Input file for ", SEX, " not created"))
+    if(any(CHECK.marked$marked <= 0)) {
+      cat(paste0("No marked ", SEX, " recoveries in strata \n Input file for ", SEX, " not created"))
     # if there are no marked recoveries in one of the recovery strata, the loop stops here and produces the above message
-    if(any(CHECK.marked$marked > 0)){ # if all good, the loop continues
+    } else { # if all good, the loop continues
       
       # t by s matrix of number of tags recovered in strata t by application strata s
       t.rec <- appdat %>%
@@ -156,7 +157,7 @@ make.report <- function(model.list){
     )
     
   })
-  report <- mutate(report, deltaAIC = round(AICc - min(AICc)), 3) %>% arrange(deltaAIC)
+  report <- mutate(report, deltaAIC = AICc - min(AICc)) %>% arrange(deltaAIC)
   report <- report[, c(1:3,16,4:15)]
   report
 }
