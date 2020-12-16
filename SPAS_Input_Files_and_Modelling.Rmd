@@ -141,7 +141,7 @@ Check
 colnames(rec)
 ```
 
-Quick Check if MACH2 Default
+Quick Check of MACH2 Default
 ```{r}
 colnames(rec)[17] == "Recovery.strata:.=Days"
 colnames(rec)[20] == "Recovery.strata:.area"
