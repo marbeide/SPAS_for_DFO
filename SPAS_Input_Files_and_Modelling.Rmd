@@ -51,22 +51,19 @@ Delete the # in front of install.packages() if you do not have "tidyverse" or "o
 You can check if they are installed by clicking the "Packages" tab in the Plots pane (often bottom right pane) and scrolling down (packages are sorted alphabetically)
 
 ```{r}
+#install.packages("SPAS") # Need to unhashtag this if you have never installed SPAS before
 #install.packages("tidyverse")
 #install.packages("openxlsx")
 ```
 
 ## Install or Update SPAS
+(old notes that may still be relevant at some point)
 Sometimes this install will prompt you to install other packages. Type 1 into the console to select all packagess and install them.
 IF some packages fail to install, try the following:
   a) Use the "Update" button in the "Packages" tab of the "Files/Plots/Packages/Help" Window. Click the button, then select the packages that need to be updated. Click the Update button.
 Remove the packages and re-install them.
   b) Or try: remove.packages(“package name”) in the console (enter package name and then click enter) and then use install.packages(‘package name’) to re-install it.
   c) If the above doesn’t work, try: go to your Library folder on your computer and delete the files. You can find your library location by clicking the “Install” button and seeing where the packages are being installed by default. Navigate to the folder and delete the package folder(s). Use install.packages() or Install button to re-install the problem package.
-```{r}
-# ALWAYS run the below line to see if there are updates to SPAS in GitHub
-devtools::install_github("cschwarz-stat-sfu-ca/SPAS", dependencies = TRUE,
-                        build_vignettes = TRUE)
-```
 
 ##Library other packages
 Press play!
