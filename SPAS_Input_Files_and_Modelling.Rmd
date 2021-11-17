@@ -6,7 +6,7 @@ output:
   rmarkdown::html_vignette: default
   html: default
 created: '2018-11-26'
-updated: '2020-03-27'
+updated: '2021-11-17'
 ---
 
 # Intro to R Studio and Using this .Rmd script
@@ -84,14 +84,16 @@ getwd() # you can either check with this or by looking at the Files tab in the p
 Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
 
 #3 Read In Data
-Read in data from "WB5PopEstimator.xlsm"
+
+***Save as a copy of "WB5PopEstimator.xlsm" as a .xlsx***
+
 The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" sheets as long as they have not changed position in MACH2.
 i.e. if there have been changes to MACH2, you will need to change the numbers after "sheet = " so that they match the above respectively
 
 If the WB5PopEstimator file name has changed, you will have to modify it accordingly in this chunk
 ```{r}
-app <- read.xlsx("WB5PopEstimator.xlsm", sheet = 4, detectDates = F)
-rec <- read.xlsx("WB5PopEstimator.xlsm", sheet = 5, detectDates = F)
+app <- read.xlsx("WB5PopEstimator.xlsx", sheet = 4, detectDates = F)
+rec <- read.xlsx("WB5PopEstimator.xlsx", sheet = 5, detectDates = F)
 ```
 
 # 4 Check and Rename Columns
@@ -123,6 +125,7 @@ Otherwise, you may have to renumber which columns are being changed and what you
 
 Please only use letters, numbers, and underscores in your names when you make new column names. NO SPACES.  
 The most essential column names to change are the ones that you are going to use. You may ignore changing the rest if desired.
+Feel free to rename column names to what they may actually represent versus what MACH2 auto-names them.
 
 ```{r}
 colnames(app)[37:47] <- c("app_equal_days", "app_equal_effort", "app_equal_numbers",
