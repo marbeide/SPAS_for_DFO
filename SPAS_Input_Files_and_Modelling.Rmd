@@ -10,32 +10,51 @@ updated: '2021-11-17'
 ---
 
 # Intro to R Studio and Using this .Rmd script
-This "R Markdown" (.Rmd) files works well when used in R studio. If you are unfamiliar with R Studio, this book: https://bookdown.org/ndphillips/YaRrr/the-four-rstudio-windows.html has a good intro to the different Windows and features as well as other info about using R.  
+This "R Markdown" (.Rmd) files works well when used in R studio. If you are 
+unfamiliar with R Studio, this book: 
+https://bookdown.org/ndphillips/YaRrr/the-four-rstudio-windows.html 
+has a good intro to the different Windows and features as well as other info 
+about using R.  
 
-This Markdown file contains a function that produces the SPAS input file from the MACH2 xlsm file WB5PopEstimator.  
+This Markdown file contains a function that produces the SPAS input file from 
+the MACH2 xlsm file WB5PopEstimator.  
 
 The steps to running this markdown file are as follows:  
 1) Install & Load Packages & Functions  
-2) Set Working Directory (to location of MACH2 files for specific project-year) IF-NEED-BE  
+2) Set Working Directory (to location of MACH2 files for specific project-year 
+   IF-NEED-BE)
 3) Read in Data  
 4) Check and Rename Columns  
 5) Create Input File  
 6) Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm  
-7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to desired folder location  
+7) Locate SPAS2_input.csv(s) in MACH2 folder (working directory) & move to 
+   desired folder location (IF-NEED-BE)  
 8) Double Check SPAS2_input.csv(s) by opening them  
 9) Run SPAS!  
-10) Save and Rename this file to the system and year it belongs to
+10) Save and Rename this file to the system and year it belongs to (can also be
+    step 1)
 
 
 ## SPAS R input file format
-The format of the SPAS_R_input.csv(s) is a matrix of s+1 by t+1 (where s = number of application strata and t = number of recovery strata)
-Cell s+1 by t+1 will always be 0
-Column t+1 = contains the number of animals marked in each row stratum but not recovered in any column stratum.
-Row s+1 = contains the total number of UNMARKED animals recovered in column stratum it's in.
-All of the other cells are the number of recovered MARKED individuals of stratum s by t
+The format of the SPAS_R_input.csv(s) is a matrix of s+1 by t+1 (where s = 
+number of application strata and t = number of recovery strata)
+
+Cell s+1 by t+1 will always be 0 (bottom right cell)
+
+Column t+1 (last column) = contains the number of animals marked in each row 
+stratum but not recovered in any column stratum.
+
+Row s+1 (bottom row) = contains the total number of UNMARKED animals recovered 
+in column stratum it's in.
+
+All of the other cells are the number of recovered MARKED individuals of marked 
+stratum s by recovery stratum t
 
 ## Instructions for first time .Rmd users
-To Run code, either click the green "play" button for a given "chunk" (right hand side of chunk) or click to the line you want to run and then either click "Run" at the top of this pane or click crt+enter if on a pc or cmd+enter if on a mac.  
+To Run code, either click the green "play" button for a given "chunk" (right 
+hand side of chunk) or click to the line you want to run and then either click 
+"Run" at the top of this pane or click crt+enter if on a pc or cmd+enter if on 
+a mac.  
 Chunks are denoted by '''{r} and ended by '''
 
 Run every chunk in sequence.  
@@ -47,8 +66,11 @@ rm(list=ls()) # clears global environment if need-be, this can generally be igno
 ```
 
 #1 Install & Load Packages
-Delete the # in front of install.packages() if you do not have "tidyverse" or "openxlsx" installed
-You can check if they are installed by clicking the "Packages" tab in the Plots pane (often bottom right pane) and scrolling down (packages are sorted alphabetically)
+Delete the # in front of install.packages() if you do not have "tidyverse" or 
+"openxlsx" installed
+You can check if they are installed by clicking the "Packages" tab in the Plots 
+pane (often bottom right pane) and scrolling down (packages are sorted 
+alphabetically)
 
 ```{r}
 #install.packages("SPAS") # Need to unhashtag this if you have never installed SPAS before
@@ -58,12 +80,21 @@ You can check if they are installed by clicking the "Packages" tab in the Plots 
 
 ## Install or Update SPAS
 (old notes that may still be relevant at some point)
-Sometimes this install will prompt you to install other packages. Type 1 into the console to select all packagess and install them.
+Sometimes this install will prompt you to install other packages. Type 1 into 
+the console to select all packagess and install them.
 IF some packages fail to install, try the following:
-  a) Use the "Update" button in the "Packages" tab of the "Files/Plots/Packages/Help" Window. Click the button, then select the packages that need to be updated. Click the Update button.
+  a) Use the "Update" button in the "Packages" tab of the 
+  "Files/Plots/Packages/Help" Window. Click the button, then select the packages 
+  that need to be updated. Click the Update button.
 Remove the packages and re-install them.
-  b) Or try: remove.packages(“package name”) in the console (enter package name and then click enter) and then use install.packages(‘package name’) to re-install it.
-  c) If the above doesn’t work, try: go to your Library folder on your computer and delete the files. You can find your library location by clicking the “Install” button and seeing where the packages are being installed by default. Navigate to the folder and delete the package folder(s). Use install.packages() or Install button to re-install the problem package.
+  b) Or try: remove.packages(“package name”) in the console (enter package name 
+  and then click enter) and then use install.packages(‘package name’) to 
+  re-install it.
+  c) If the above doesn’t work, try: go to your Library folder on your computer 
+  and delete the files. You can find your library location by clicking the 
+  “Install” button and seeing where the packages are being installed by default. 
+  Navigate to the folder and delete the package folder(s). 
+  Use install.packages() or Install button to re-install the problem package.
 
 ##Library other packages
 Press play!
@@ -71,7 +102,8 @@ Press play!
 library(tidyverse)
 library(openxlsx)
 library(SPAS)
-# if there are R version errors, you will likely have to ignore them because we can't update R to the latest version through the Software Center
+# if there are R version errors, you will likely have to ignore them because we 
+# can't update R to the latest version through the Software Center
 source("SPAS_Input_Tool_Functions.R") # reads in functions from associated R script
 ```
 
@@ -81,16 +113,21 @@ This step is only needed if your working directory isn't where your files are!
 getwd() # you can either check with this or by looking at the Files tab in the plots window
 ```
 
-Since the files are probably all in different places per project-year, the easiest way to set this is likely by going into the "Session" tab, "Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
+Since the files are probably all in different places per project-year, the 
+easiest way to set this is likely by going into the "Session" tab, 
+"Set Working Directory", "Choose Directory..." OR press Ctrl+Shift+H
 
 #3 Read In Data
 
 ***Save as a copy of "WB5PopEstimator.xlsm" as a .xlsx***
 
-The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" sheets as long as they have not changed position in MACH2.
-i.e. if there have been changes to MACH2, you will need to change the numbers after "sheet = " so that they match the above respectively
+The following chunk reads in the "AppRec(PostStress)" and "Recovery(Adjusted)" 
+sheets as long as they have not changed position in MACH2.
+i.e. if there have been changes to MACH2, you will need to change the numbers 
+after "sheet = " so that they match the above respectively
 
-If the WB5PopEstimator file name has changed, you will have to modify it accordingly in this chunk
+If the WB5PopEstimator file name has changed, you will have to modify it 
+accordingly in this chunk
 ```{r}
 app <- read.xlsx("WB5PopEstimator.xlsx", sheet = 4, detectDates = F)
 rec <- read.xlsx("WB5PopEstimator.xlsx", sheet = 5, detectDates = F)
@@ -98,10 +135,14 @@ rec <- read.xlsx("WB5PopEstimator.xlsx", sheet = 5, detectDates = F)
 
 # 4 Check and Rename Columns
 
-The next chunk renames those troublesome strata column names with "=" and " ' " and other symbols that confuse R.
+The next chunk renames those troublesome strata column names with "=" and " ' " 
+and other symbols that confuse R.
 
-!!!Need to check if these are in fact the columns present and in the right place!!!
-*** Note: MACH2 does not carry-over the names given in the original stratification tool, so you will need to figure out what matches with what in the excel workbooks
+!!!Need to check if these are in fact the columns present and in the right 
+place!!!
+*** Note: MACH2 does not carry-over the names given in the original 
+stratification tool, so you will need to figure out what matches with what in 
+the excel workbooks
 
 Run this chunk
 ```{r}
@@ -111,7 +152,8 @@ colnames(app)
 Where is your first Strata column names? i.e. what is the column number?
 Where is you last column name?
 
-Here is a quick check if you are doing Chinook and haven't changed the number or type of default strata in MACH2
+Here is a quick check if you are doing Chinook and haven't changed the number or 
+type of default strata in MACH2
 ```{r}
 # is "Application.strata:.=Days" in position 37 & "Application.strata:.extra2" in 47?
 colnames(app)[37] == "Application.strata:.=Days"
@@ -120,12 +162,17 @@ colnames(app)[47] == "Application.strata:.extra2"
 # if all are TRUE, you likely do not need to modify the below, if FALSE, you will have to find the correct positions
 ```
 
-If your column names looks like they match the names below, then just run that chunk.  
-Otherwise, you may have to renumber which columns are being changed and what your new column names are.  
+If your column names looks like they match the names below, then just run that 
+chunk.  
+Otherwise, you may have to renumber which columns are being changed and what 
+your new column names are.  
 
-Please only use letters, numbers, and underscores in your names when you make new column names. NO SPACES.  
-The most essential column names to change are the ones that you are going to use. You may ignore changing the rest if desired.
-Feel free to rename column names to what they may actually represent versus what MACH2 auto-names them.
+Please only use letters, numbers, and underscores in your names when you make 
+new column names. NO SPACES.  
+The most essential column names to change are the ones that you are going to use. 
+You may ignore changing the rest if desired.
+Feel free to rename column names to what they may actually represent versus what 
+MACH2 auto-names them.
 
 ```{r}
 colnames(app)[37:47] <- c("app_equal_days", "app_equal_effort", "app_equal_numbers",
@@ -159,13 +206,15 @@ colnames(rec)[17:23] <- c("rec_equal_days", "rec_equal_effort", "rec_equal_numbe
 In the chunk below, do the following:
 
   i) Enter the decided upon strata after the = sign 
-     for app.strata and rec.strata where it says ENTER_APP_STRATA and ENTER_REC_STRATA
+     for app.strata and rec.strata where it says ENTER_APP_STRATA and 
+     ENTER_REC_STRATA
 
 e.g. app.strata = app_equal_days , 
      rec.strata = rec_equal_numbers ,
 
 
-  ii) Replace ENTER_NUMBER text withthe Male sex correction factor after the = sign for sex.correction
+  ii) Replace ENTER_NUMBER text withthe Male sex correction factor after 
+  the = sign for sex.correction
                           
 ```{r}
 NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equal_days
@@ -173,50 +222,65 @@ NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equ
 SPAS.input.file(appdat = app, # application data from Section 3, do not change this
                  recdat = rec, # recovery data from Section 3,  do not change this
                  app.strata = ENTER_APP_STRATA , # enter your application strata from the list above
-                 # if there are multiple strata, use c(STRATA1, STRATA2) and change combine.app to = TRUE. You will also need do a combined rec strata too so that the secondary only recovery fish are applied correctly accross app strata.
+                 # if there are multiple strata, use c(STRATA1, STRATA2) and 
+                 # change combine.app to = TRUE. You will also need do a 
+                 # combined rec strata too so that the secondary only recovery fish are applied correctly accross app strata.
                  combine.app = FALSE ,
-                 rec.strata = ENTER_REC_STRATA , # enter you recovery strata from the list above. dito, c(StRATA1, STRATA 2) if multiple strata and change below to TRUE
+                 rec.strata = ENTER_REC_STRATA , # enter you recovery strata from 
+                 # the list above. dito, c(StRATA1, STRATA 2) if multiple strata and change below to TRUE
                  combine.rec = FALSE, 
                  sex.correction = ENTER_NUMBER , # enter the Male sex correction from 1WB1SexCF.xlsm
                  name = NAME, # don't need to change
-                  sex.include = c("M", "F"))  # Add ,"J" if you want an file for Jacks, or remove one if you only want one of the sexes
+                  sex.include = c("M", "F"))  # Add ,"J" if you want an file for Jacks, 
+                  # or remove one if you only want one of the sexes
 ```
 
 Copy and paste the above code if you want to make multiple stratifications
 
 #6 Validate numbers with PopEstimatorPRT in WB5PopEstimator.xlsm
 
-There should be an output in the R Console of values for each sex. Use these values to validate that R has counted or added up the same numbers that correspond in the PopEstimatorPRT sheet int he WB5PopEstimator.xlsm file.
+There should be an output in the R Console of values for each sex. Use these 
+values to validate that R has counted or added up the same numbers that 
+correspond in the PopEstimatorPRT sheet int he WB5PopEstimator.xlsm file.
 
 If they don't... something has gone awry.
 
 #7 Locate SPAS_input.csv(s) in MACH2 folder (working directory)
 
-The function automatically created the input files and placed them in your working directory you chose in Step #2.  
+The function automatically created the input files and placed them in your 
+working directory you chose in Step #2.  
 They are named SPAS_R_..._input_SEX.csv
 
 #8 Triple Check SPAS_input.csv(s) by opening them
-You can do a triple check here by summing the correct columns to again make sure the sums add to the ones in the MACH2 files.
+You can do a triple check here by summing the correct columns to again make sure 
+the sums add to the ones in the MACH2 files.
 Just make sure you don't save those column sums!
 ALSO make sure that there is a 0 in the bottom right cell.
 
 #9 Run SPAS!
 ## Read SPAS Input Files
-Should just be able to press play to load in whatever was the last dataframe that was created.
-The below code also rounds all of the data so integers are going into the SPAS function.
+Should just be able to press play to load in whatever was the last dataframe 
+that was created.
+The below code also rounds all of the data so integers are going into the SPAS 
+function.
 ```{r}
-(males <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, "_input_Males.csv", sep = ""), header = F)),0)) # rename if you are using multiple stratifications
-(females <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, "_input_Females.csv", sep = ""), header = F)),0))
+(males <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, 
+                                         "_input_Males.csv", sep = ""), header = F)),0)) 
+# rename if you are using multiple stratifications
+(females <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, 
+                                           "_input_Females.csv", sep = ""), header = F)),0))
 ```
 
 ### NOTES ON SPAS
 - ONLY Rows can be pooled, NOT columns.  
 - There MUST be more columns than rows after stratifying.
-- Chapman Estimate may not match 100 % due to rounding error as SPAS requires whole numbers and excel is using decimals.
+- Chapman Estimate may not match 100 % due to rounding error as SPAS requires 
+whole numbers and excel is using decimals.
 
 ## SPAS for Males
 Edit the row.pool and col.pool ins to the correct number of strata.
-Copy and paste the function if there are additional poolings that are desired. Remember to increase the mod..#
+Copy and paste the function if there are additional poolings that are desired. 
+Remember to increase the mod..#
 ```{r}
 modM..1 <- SPAS.fit.model(males, # make sure data frame is correct
                            model.id = "Petersen", # change name to desired description
