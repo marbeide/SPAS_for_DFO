@@ -174,6 +174,8 @@ You may ignore changing the rest if desired.
 Feel free to rename column names to what they may actually represent versus what 
 MACH2 auto-names them.
 
+
+***Consider renaming to the names of the actual strata, e.g. app_3_equal, app_2_equal***
 ```{r}
 colnames(app)[37:47] <- c("app_equal_days", "app_equal_effort", "app_equal_numbers",
                           "app_equal_area", "app_equal_recaps", "app_equal_extra1",
@@ -196,6 +198,7 @@ colnames(rec)[23] == "Recovery.strata:.extra2"
 ```
 
 Where you actually change stuff if need be
+***Use same names you used from above chunk for rec strata***
 ```{r}
 colnames(rec)[17:23] <- c("rec_equal_days", "rec_equal_effort", "rec_equal_numbers",
                           "rec_equal_area", "rec_equal_area2", "rec_equal_extra1",
@@ -217,7 +220,9 @@ e.g. app.strata = app_equal_days ,
   the = sign for sex.correction
                           
 ```{r}
-NAME <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equal_days
+# May change to NAME_M for Males, or NAME_F for females, etc.
+# Note that if NAME_X is changed, you need to change it in all code below
+NAME_X <- "ENTER_A_NAME" # enter the stratification descripter, e.g.spatial or equal_days
 
 SPAS.input.file(appdat = app, # application data from Section 3, do not change this
                  recdat = rec, # recovery data from Section 3,  do not change this
@@ -230,7 +235,7 @@ SPAS.input.file(appdat = app, # application data from Section 3, do not change t
                  # the list above. dito, c(StRATA1, STRATA 2) if multiple strata and change below to TRUE
                  combine.rec = FALSE, 
                  sex.correction = ENTER_NUMBER , # enter the Male sex correction from 1WB1SexCF.xlsm
-                 name = NAME, # don't need to change
+                 name = NAME_X, # don't need to change
                   sex.include = c("M", "F"))  # Add ,"J" if you want an file for Jacks, 
                   # or remove one if you only want one of the sexes
 ```
@@ -264,10 +269,10 @@ that was created.
 The below code also rounds all of the data so integers are going into the SPAS 
 function.
 ```{r}
-(males <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, 
+(males <- round(as.matrix(read.csv(paste("SPAS_R_", NAME_X, #may need to change X
                                          "_input_Males.csv", sep = ""), header = F)),0)) 
 # rename if you are using multiple stratifications
-(females <- round(as.matrix(read.csv(paste("SPAS_R_", NAME, 
+(females <- round(as.matrix(read.csv(paste("SPAS_R_", NAME_X, #may need to change X
                                            "_input_Females.csv", sep = ""), header = F)),0))
 ```
 
@@ -291,7 +296,7 @@ modM..1 <- SPAS.fit.model(males, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..1) # remove hastag if you want to view the individual result
+# SPAS.print.model(modM..1) # remove hastag if you want to view the individual result
 
 modM..2 <- SPAS.fit.model(males, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
@@ -302,7 +307,7 @@ modM..2 <- SPAS.fit.model(males, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..2)
+# SPAS.print.model(modM..2)
 
 # Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
 
@@ -310,7 +315,7 @@ modM..2 <- SPAS.fit.model(males, # make sure data frame is correct
 model.list <- get.models("^modM\\.\\.")
 report.males <- make.report(model.list)
 
-write.xlsx(report.males, paste(NAME, "_males_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
+write.xlsx(report.males, paste(NAME_X, "_males_report.xlsx", sep = ""), rowNames = F, colWidths = "auto")
 # can ignore "Note", likely from packages not all being up to date.
 ```
 
@@ -325,7 +330,7 @@ modF..1 <- SPAS.fit.model(females, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..1)
+# SPAS.print.model(modF..1)
 
 modF..2 <- SPAS.fit.model(females, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
@@ -336,7 +341,7 @@ modF..2 <- SPAS.fit.model(females, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..2)
+# SPAS.print.model(modF..2)
 
 # Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
 
@@ -344,7 +349,7 @@ modF..2 <- SPAS.fit.model(females, # make sure data frame is correct
 model.list <- get.models("^modF\\.\\.")
 report.females <- make.report(model.list)
 
-write.xlsx(report.females, paste(NAME, "_females_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
+write.xlsx(report.females, paste(NAME_X, "_females_report.xlsx", sep = ""), rowNames = F, colWidths = "auto")
 ```
 
 ## SPAS for Jacks
@@ -358,7 +363,7 @@ modJ..1 <- SPAS.fit.model(jacks, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..1)
+# SPAS.print.model(modJ..1)
 
 modJ..2 <- SPAS.fit.model(jacks, # make sure data frame is correct
                              model.id = "Stratified", # change name to desired description
@@ -369,13 +374,13 @@ modJ..2 <- SPAS.fit.model(jacks, # make sure data frame is correct
                        CJSpool = FALSE,
                        row.physical.pool=FALSE) # don't change for now
 
-# SPAS.print.model(mod..2)
+# SPAS.print.model(modJ..2)
 
-# Copy and paste mod..2 until this point if there is another stratification type and edit data going into it and name to mod3
+# Copy and paste modJ..2 until this point if there is another stratification type and edit data going into it and name to mod3
 
 
 model.list <- get.models("^modJ\\.\\.")
 report.jacks <- make.report(model.list)
 
-write.xlsx(report.jacks, paste(NAME, "_jacks_report.xlsx", sep = ""), row.names = F, colWidths = "auto")
+write.xlsx(report.jacks, paste(NAME_X, "_jacks_report.xlsx", sep = ""), rowNames = F, colWidths = "auto")
 ```
