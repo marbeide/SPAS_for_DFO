@@ -151,6 +151,7 @@ make.report <- function(model.list){
       np               = x$model.info$np,
       chapman.est      = round(x$est$N.Chapman, 0),
       kappa.pooled     = round(x$kappa.after.lp, 0),
+      cap.probs        = paste(round(x$est$real$cap, 3), collapse = "."),
       gof.chisq        = round(x$gof$chisq, 1),
       gof.df           = x$gof$chisq.df,
       gof.p            = round(x$gof$chisq.p, 3)
