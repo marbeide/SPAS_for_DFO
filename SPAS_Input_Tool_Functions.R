@@ -159,6 +159,6 @@ make.report <- function(model.list){
     
   })
   report <- mutate(report, deltaAIC = AICc - min(AICc)) %>% arrange(deltaAIC)
-  report <- report[, c(1:3,16,4:15)]
+  report <- report[, c(1:3,17,4:16)]
   report
 }
