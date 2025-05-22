@@ -142,19 +142,19 @@ make.report <- function(model.list){
     data.frame(#version=x$version,
       date   = as.Date(x$date),
       model.id         = x$model.info$model.id,
-      AICc             = round(x$model.info$AICc, 3),
-      Nhat             = round(x$est$real$N),
-      Nhat.se          = round(x$se $real$N),
+      AICc             = round2(x$model.info$AICc, 3),
+      Nhat             = round2(x$est$real$N),
+      Nhat.se          = round2(x$se $real$N),
       s.a.pool         =-1+nrow(x$fit.setup$pooldata),
       t.p.pool         =-1+ncol(x$fit.setup$pooldata),
       logL.cond        = x$model.info$logL.cond,
       np               = x$model.info$np,
-      chapman.est      = round(x$est$N.Chapman, 0),
-      kappa.pooled     = round(x$kappa.after.lp, 0),
-      cap.probs        = paste(round(x$est$real$cap, 3), collapse = "; "),
-      gof.chisq        = round(x$gof$chisq, 1),
+      chapman.est      = round2(x$est$N.Chapman, 0),
+      kappa.pooled     = round2(x$kappa.after.lp, 0),
+      cap.probs        = paste(round2(x$est$real$cap, 3), collapse = "; "),
+      gof.chisq        = round2(x$gof$chisq, 1),
       gof.df           = x$gof$chisq.df,
-      gof.p            = round(x$gof$chisq.p, 3)
+      gof.p            = round2(x$gof$chisq.p, 3)
     )
     
   })
@@ -162,3 +162,18 @@ make.report <- function(model.list){
   report <- report[, c(1:3,17,4:16)]
   report
 }
+
+# Better Rounding Function than Base R
+# # Source
+# https://stackoverflow.com/questions/12688717/round-up-from-5
+# Original Source
+# http://andrewlandgraf.com/2012/06/15/rounding-in-r/
+round2 = function(x, digits) {
+  posneg = sign(x)
+  z = abs(x)*10^digits
+  z = z + 0.5 + sqrt(.Machine$double.eps)
+  z = trunc(z)
+  z = z/10^digits
+  z*posneg
+}
+
